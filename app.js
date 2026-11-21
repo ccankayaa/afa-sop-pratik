@@ -14,6 +14,9 @@ const allQuestions = tests.flatMap((test) =>
 const questionsByKey = new Map(
   allQuestions.map((question) => [question.key, question]),
 );
+const questionsById = new Map(
+  allQuestions.map((question) => [question.questionId, question]),
+);
 const searchIndex = allQuestions.map((question) => ({
   question,
   prompt: searchText(question.prompt),
@@ -49,8 +52,8 @@ const strings = {
     timingPartial:
       "Süre kaydı, bu özellik eklendikten sonraki çalışmayı gösterir.",
     search: "Soru ara",
-    searchPlaceholder: "Ör. oil temperature, flap speed",
-    searchHint: "Sorudan veya şıklardan en az iki karakter yaz.",
+    searchPlaceholder: "Ör. AFA-012 veya oil temperature",
+    searchHint: "Soru ID’sini veya sorudan ya da şıklardan birkaç kelime yaz.",
     searchCount: "{n} soru bulundu",
     searchEmpty: "Eşleşen soru bulunamadı.",
     openQuestion: "Soruyu testte aç",
@@ -171,8 +174,9 @@ const strings = {
     questionTimes: "Time per question",
     timingPartial: "Recorded time reflects work since time tracking was added.",
     search: "Search questions",
-    searchPlaceholder: "E.g. oil temperature, flap speed",
-    searchHint: "Enter at least two characters from a question or its choices.",
+    searchPlaceholder: "E.g. AFA-012 or oil temperature",
+    searchHint:
+      "Enter a question ID or a few words from a question or its choices.",
     searchCount: "{n} questions found",
     searchEmpty: "No matching questions.",
     openQuestion: "Open question in test",
@@ -891,7 +895,7 @@ function renderQuestion(test, run) {
     !unscored && Number.isInteger(selected) && selected !== question.answer;
   const last = run.index === test.questions.length - 1;
   const nextAction = last ? (run.finished ? "results" : "finish") : "next";
-  return `<section class="question-card" aria-labelledby="question-title"><div class="question-meta"><span class="question-number">${t("questionOf", { n: String(run.index + 1).padStart(2, "0"), total: test.questions.length })}</span><div class="question-tags"><span class="chip ${unscored ? "warning" : ""}">${t(unscored ? "unscored" : "singleAnswer")}</span></div></div>
+  return `<section class="question-card" aria-labelledby="question-title"><div class="question-meta"><div class="question-reference"><span class="question-id">${esc(question.questionId)}</span><span class="question-number">${t("questionOf", { n: String(run.index + 1).padStart(2, "0"), total: test.questions.length })}</span></div><div class="question-tags"><span class="chip ${unscored ? "warning" : ""}">${t(unscored ? "unscored" : "singleAnswer")}</span></div></div>
     <h2 id="question-title" class="question-text" lang="en" tabindex="-1">${esc(question.prompt)}</h2>
     <div class="options" role="radiogroup" aria-labelledby="question-title">${question.options
       .map((text, option) => {
@@ -1119,27 +1123,34 @@ function searchText(value) {
 
 function renderSearchResults() {
   const query = searchText($("search-input").value);
+  const idMatch = /^(?:afa\s*)?(\d{1,3})$/.exec(query);
+  const exactQuestion =
+    idMatch && questionsById.get(`AFA-${idMatch[1].padStart(3, "0")}`);
   const output = $("search-results");
-  if (query.length < 2) {
+  if (!exactQuestion && query.length < 2) {
     $("search-status").textContent = t("searchHint");
     output.replaceChildren();
     return;
   }
   const terms = query.split(" ");
-  const matches = searchIndex
-    .flatMap(({ question, prompt, choices }) => {
-      if (
-        !terms.every((term) => prompt.includes(term) || choices.includes(term))
-      )
-        return [];
-      const rank = prompt.includes(query)
-        ? 2
-        : terms.every((term) => prompt.includes(term))
-          ? 1
-          : 0;
-      return [{ question, rank }];
-    })
-    .sort((a, b) => b.rank - a.rank);
+  const matches = exactQuestion
+    ? [{ question: exactQuestion }]
+    : searchIndex
+        .flatMap(({ question, prompt, choices }) => {
+          if (
+            !terms.every(
+              (term) => prompt.includes(term) || choices.includes(term),
+            )
+          )
+            return [];
+          const rank = prompt.includes(query)
+            ? 2
+            : terms.every((term) => prompt.includes(term))
+              ? 1
+              : 0;
+          return [{ question, rank }];
+        })
+        .sort((a, b) => b.rank - a.rank);
   $("search-status").textContent = matches.length
     ? t("searchCount", { n: matches.length })
     : t("searchEmpty");
@@ -1149,7 +1160,7 @@ function renderSearchResults() {
         { question },
         index,
       ) => `<details class="search-match" ${index === 0 ? "open" : ""}>
-    <summary><span lang="en">${esc(question.prompt)}</span><small>${esc(title({ id: question.source }))} · ${t("question")} ${Number(question.key.split("/")[1]) + 1}</small></summary>
+    <summary><span lang="en">${esc(question.prompt)}</span><small><span class="question-id">${esc(question.questionId)}</span> · ${esc(title({ id: question.source }))} · ${t("question")} ${Number(question.key.split("/")[1]) + 1}</small></summary>
     <ol type="A" lang="en">${question.options.map((option) => `<li>${esc(option)}</li>`).join("")}</ol>
     <button class="button button-outline button-small" type="button" data-search-key="${esc(question.key)}">${t("openQuestion")} ${icon("arrow-right")}</button>
   </details>`,

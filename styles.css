@@ -730,6 +730,22 @@ main {
   letter-spacing: 0.07em;
   color: var(--muted);
 }
+.question-reference {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.question-id {
+  display: inline-block;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: 650 11px/1.2 ui-monospace, monospace;
+  white-space: nowrap;
+}
 .question-tags {
   display: flex;
   align-items: center;

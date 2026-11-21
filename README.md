@@ -8,7 +8,7 @@ Sol menüden seçilen test doğrudan soru ekranında açılır. Cevabı gösterm
 
 Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmızı kalır ve başka bir soruya geçmek için gezinme düğmesi veya soru haritası kullanılır. Test sayacı 00:00’dan başlar ve testin başlangıcından beri geçen süreyi gösterir. Sonuçta her sorunun açık ve sekmenin görünür olduğu süre ile bunların toplamı gösterilir. Soru araması açıkken geçirilen süre bu ölçüme dahil edilmez.
 
-Üst menüdeki **Soru ara** düğmesi tüm soru ve şıklarda kelime arar. Sonuçları şıklarıyla açabilir ve doğrudan ilgili soruya gidebilirsin.
+Her sorunun sol üstünde benzersiz bir ID görünür. Üst menüdeki **Soru ara** ile ID’yi (ör. `AFA-032`) veya soru ve şıklardaki kelimeleri arayabilirsin. Sonucu şıklarıyla açabilir ve doğrudan ilgili soruya gidebilirsin.
 
 Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar. Altı kaynak testin tüm puanlı soruları cevaplanıp testler bitirildikten sonra, hatalı cevaplanan sorular **Yanlışları tekrar çöz** testinde toplanır. Bu koşul birleşik ve tüm soruları içeren testlerle de karşılanabilir.
 
@@ -34,7 +34,7 @@ Ardından `http://localhost:4173` adresini açın. Vercel'de depoyu içe aktarı
 
 ## Kaynak ve bağımsızlık
 
-Soru bankası paylaşılan `grnd class -.docx` AFA SOP çalışma belgesinden aktarılmıştır. Önceki soru bankası ve cevap anahtarları korunmuştur. Açık uçlu maddeler için önceki aktarımda pratik şıklar eklenmiştir. Numaradan ibaret üç boş madde ve aynı testte şıklı olarak bulunan cevapsız bir açık uçlu tekrar bankaya dahil değildir.
+Soru bankası paylaşılan `grnd class -.docx` AFA SOP çalışma belgesinden aktarılmıştır. Açık uçlu maddeler için pratik şıklar eklenmiştir. Numaradan ibaret üç boş madde ve aynı testte şıklı olarak bulunan cevapsız bir açık uçlu tekrar bankaya dahil değildir.
 
 **AFA ile bağlantısı yoktur. Resmî belge veya eğitim materyali değildir.** Uçuşta güncel, kontrollü SOP/AFM esas alınır.
 
