@@ -41,9 +41,7 @@ const strings = {
     selectForMix: "Teste ekle: {name}",
     wrongTest: "Yanlışları tekrar çöz",
     wrongEmpty: "Tüm testleri bitirdin. Tekrar çözülecek yanlış cevap yok.",
-    timeLeft: "Kalan süre",
-    overtime: "Ek süre",
-    timeUp: "Süre doldu. Teste devam edebilirsin.",
+    elapsedTime: "Geçen süre",
     totalTime: "Toplam çözme süresi",
     questionTimes: "Soru başına süre",
     timingPartial:
@@ -165,9 +163,7 @@ const strings = {
     wrongTest: "Retry incorrect answers",
     wrongEmpty:
       "You finished all tests. There are no incorrect answers to retry.",
-    timeLeft: "Time remaining",
-    overtime: "Overtime",
-    timeUp: "Time is up. You can keep working on this test.",
+    elapsedTime: "Elapsed time",
     totalTime: "Total time spent",
     questionTimes: "Time per question",
     timingPartial: "Recorded time reflects work since time tracking was added.",
@@ -346,8 +342,9 @@ function getTest(id, data = state) {
 }
 
 const currentTest = () => getTest(state.active);
-const duration = (test) =>
-  Math.max(5, Math.ceil((test.questions.length * 75) / 60)) * 60_000;
+function previousTimeLimit(test) {
+  return Math.max(5, Math.ceil((test.questions.length * 75) / 60)) * 60_000;
+}
 const newRun = (test) => ({
   index: 0,
   choices: {},
@@ -355,7 +352,7 @@ const newRun = (test) => ({
   flags: {},
   finished: false,
   results: false,
-  deadline: Date.now() + duration(test),
+  startedAt: Date.now(),
   questionMs: {},
   ...(test.id === "wrong"
     ? { keys: test.questions.map((question) => question.key) }
@@ -432,7 +429,11 @@ function restore() {
       flags: {},
       finished: old.finished === true,
       results: old.results === true && old.finished === true,
-      deadline: Number.isFinite(old.deadline) ? old.deadline : null,
+      startedAt: Number.isFinite(old.startedAt)
+        ? old.startedAt
+        : Number.isFinite(old.deadline)
+          ? old.deadline - previousTimeLimit(test)
+          : null,
       questionMs: {},
       timingPartial: old.timingPartial === true || !old.questionMs,
       ...(id === "wrong"
@@ -905,8 +906,8 @@ function renderQuestionTimes(test, run) {
   </div>`;
 }
 
-function remainingSeconds(run) {
-  return Math.ceil((run.deadline - Date.now()) / 1000);
+function elapsedSeconds(run) {
+  return Math.max(0, Math.floor((Date.now() - run.startedAt) / 1000));
 }
 
 function formatTime(seconds) {
@@ -914,9 +915,7 @@ function formatTime(seconds) {
 }
 
 function timerLabel(run) {
-  const seconds = remainingSeconds(run);
-  const label = t(seconds < 0 ? "overtime" : "timeLeft");
-  return `<div class="test-timer${seconds <= 60 ? " is-urgent" : ""}"><span id="timer-label">${label}</span><strong role="timer" aria-labelledby="timer-label" id="test-countdown">${seconds < 0 ? "+" : ""}${formatTime(Math.abs(seconds))}</strong></div>`;
+  return `<div class="test-timer"><span id="timer-label">${t("elapsedTime")}</span><strong role="timer" aria-labelledby="timer-label" id="elapsed-timer">${formatTime(elapsedSeconds(run))}</strong></div>`;
 }
 
 function renderPractice() {
@@ -957,8 +956,7 @@ function readRoute() {
   if (test) {
     state.active = id;
     const run = runFor();
-    if (!run.finished && run.deadline === null)
-      run.deadline = Date.now() + duration(test);
+    if (!run.finished && run.startedAt === null) run.startedAt = Date.now();
   }
   setDrawer(false, false);
   save();
@@ -1035,25 +1033,16 @@ function syncQuestionClock() {
   questionClock = tracking ? { run, index: run.index, since: now } : null;
 }
 
-function updateCountdown() {
+function updateTimer() {
   const now = performance.now();
   if (questionClock && now - questionClock.since >= 5000) {
     checkpointQuestion(now);
     save();
   }
-  const countdown = $("test-countdown");
-  if (!countdown || view !== "test") return;
-  const seconds = remainingSeconds(runFor());
-  const label = $("timer-label");
-  const overtime = seconds < 0;
-  const description = t(overtime ? "overtime" : "timeLeft");
-  if (label.textContent !== description) {
-    label.textContent = description;
-    if (overtime) $("announcer").textContent = t("timeUp");
-  }
-  const text = `${overtime ? "+" : ""}${formatTime(Math.abs(seconds))}`;
-  if (countdown.textContent !== text) countdown.textContent = text;
-  countdown.parentElement.classList.toggle("is-urgent", seconds <= 60);
+  const timer = $("elapsed-timer");
+  if (!timer || view !== "test") return;
+  const text = formatTime(elapsedSeconds(runFor()));
+  if (timer.textContent !== text) timer.textContent = text;
 }
 
 function finishTest() {
@@ -1358,15 +1347,15 @@ document.addEventListener("keydown", (event) => {
 
 readRoute();
 renderChrome();
-setInterval(updateCountdown, 250);
+setInterval(updateTimer, 250);
 window.addEventListener("pageshow", () => {
   syncQuestionClock();
-  updateCountdown();
+  updateTimer();
 });
 document.addEventListener("visibilitychange", () => {
   syncQuestionClock();
   save();
-  updateCountdown();
+  updateTimer();
 });
 window.addEventListener("pagehide", () => {
   checkpointQuestion();

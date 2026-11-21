@@ -1746,8 +1746,7 @@ dialog::backdrop {
 .is-neutral .option-mark {
   color: var(--muted);
 }
-.answer-note.incorrect-note,
-.test-timer.is-urgent {
+.answer-note.incorrect-note {
   color: var(--bad);
 }
 .test-timer {
