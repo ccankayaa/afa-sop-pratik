@@ -13,6 +13,11 @@ const allQuestions = tests.flatMap((test) =>
 const questionsByKey = new Map(
   allQuestions.map((question) => [question.key, question]),
 );
+const searchIndex = allQuestions.map((question) => ({
+  question,
+  prompt: searchText(question.prompt),
+  choices: searchText(question.options.join(" ")),
+}));
 const $ = (id) => document.getElementById(id);
 const esc = (value) =>
   String(value).replace(
@@ -37,7 +42,19 @@ const strings = {
     wrongTest: "Yanlışları tekrar çöz",
     wrongEmpty: "Tüm testleri bitirdin. Tekrar çözülecek yanlış cevap yok.",
     timeLeft: "Kalan süre",
-    timeUp: "Süre doldu. Test otomatik olarak bitirildi.",
+    overtime: "Ek süre",
+    timeUp: "Süre doldu. Teste devam edebilirsin.",
+    totalTime: "Toplam çözme süresi",
+    questionTimes: "Soru başına süre",
+    timingPartial:
+      "Süre kaydı, bu özellik eklendikten sonraki çalışmayı gösterir.",
+    search: "Soru ara",
+    searchPlaceholder: "Ör. oil temperature, flap speed",
+    searchHint: "Sorudan veya şıklardan en az iki karakter yaz.",
+    searchCount: "{n} soru bulundu",
+    searchEmpty: "Eşleşen soru bulunamadı.",
+    openQuestion: "Soruyu testte aç",
+    closeSearch: "Aramayı kapat",
     storageTitle: "Çerez ve tarayıcı depolama tercihleri",
     storageIntro:
       "Kabul edersen ilerleme ve istatistikler bu tarayıcıda saklanır. Yalnızca gerekli çerezleri seçersen sadece çerez tercihin hatırlanır.",
@@ -149,7 +166,18 @@ const strings = {
     wrongEmpty:
       "You finished all tests. There are no incorrect answers to retry.",
     timeLeft: "Time remaining",
-    timeUp: "Time is up. Your test was submitted automatically.",
+    overtime: "Overtime",
+    timeUp: "Time is up. You can keep working on this test.",
+    totalTime: "Total time spent",
+    questionTimes: "Time per question",
+    timingPartial: "Recorded time reflects work since time tracking was added.",
+    search: "Search questions",
+    searchPlaceholder: "E.g. oil temperature, flap speed",
+    searchHint: "Enter at least two characters from a question or its choices.",
+    searchCount: "{n} questions found",
+    searchEmpty: "No matching questions.",
+    openQuestion: "Open question in test",
+    closeSearch: "Close search",
     storageTitle: "Cookie and browser storage preferences",
     storageIntro:
       "Accept to save progress and statistics in this browser. Essential cookies only remembers your cookie preference.",
@@ -269,6 +297,7 @@ let view = "home";
 let combining = false;
 const selectedTests = new Set();
 let advanceTimer;
+let questionClock = null;
 const t = (key, values = {}) =>
   strings[state.language][key].replace(/\{(\w+)\}/g, (_, k) =>
     esc(values[k] ?? ""),
@@ -327,6 +356,7 @@ const newRun = (test) => ({
   finished: false,
   results: false,
   deadline: Date.now() + duration(test),
+  questionMs: {},
   ...(test.id === "wrong"
     ? { keys: test.questions.map((question) => question.key) }
     : {}),
@@ -403,7 +433,8 @@ function restore() {
       finished: old.finished === true,
       results: old.results === true && old.finished === true,
       deadline: Number.isFinite(old.deadline) ? old.deadline : null,
-      timedOut: old.timedOut === true,
+      questionMs: {},
+      timingPartial: old.timingPartial === true || !old.questionMs,
       ...(id === "wrong"
         ? { keys: test.questions.map((question) => question.key) }
         : {}),
@@ -418,6 +449,9 @@ function restore() {
         run.choices[index] = choice;
       if (old.revealed?.[index]) run.revealed[index] = true;
       if (old.flags?.[index]) run.flags[index] = true;
+      const elapsed = old.questionMs?.[index];
+      if (Number.isFinite(elapsed) && elapsed >= 0)
+        run.questionMs[index] = elapsed;
     });
     restored.runs[test.id] = run;
   }
@@ -582,6 +616,7 @@ function renderStorageBanner() {
 }
 
 function chooseStorage(choice) {
+  checkpointQuestion();
   const previous = consent;
   consent = choice;
   consentOpen = false;
@@ -637,6 +672,14 @@ function renderChrome() {
   $("privacy-note").textContent = t("privacy");
   $("storage-settings").textContent = t("storageSettings");
   $("developer-label").textContent = t("developer");
+  $("search-open").setAttribute("aria-label", t("search"));
+  $("search-open").title = t("search");
+  $("search-open").innerHTML = `${icon("search")}<span>${t("search")}</span>`;
+  $("search-title").textContent = t("search");
+  $("search-close").setAttribute("aria-label", t("closeSearch"));
+  $("search-close").innerHTML = icon("x");
+  $("search-input").placeholder = t("searchPlaceholder");
+  $("search-input").setAttribute("aria-label", t("search"));
   $("local-status").textContent = t(canSave() ? "saved" : "sessionOnly");
   $("language-switch").setAttribute("aria-label", t("language"));
   document
@@ -829,7 +872,7 @@ function renderQuestion(test, run) {
 
 function renderResults(test, run, result) {
   const score = num((result.correct / result.total) * 100);
-  return `<section class="question-card results" aria-labelledby="question-title"><span class="result-emblem">${icon("clipboard-check")}</span><h2 id="question-title" tabindex="-1">${t("resultTitle")}</h2>${run.timedOut ? `<p class="time-up">${t("timeUp")}</p>` : ""}<p>${t("resultSummary", result)}</p><div class="score" aria-label="${t("scoreLabel", { n: score })}">${score}<span> / 100</span></div>
+  return `<section class="question-card results" aria-labelledby="question-title"><span class="result-emblem">${icon("clipboard-check")}</span><h2 id="question-title" tabindex="-1">${t("resultTitle")}</h2><p>${t("resultSummary", result)}</p><div class="score" aria-label="${t("scoreLabel", { n: score })}">${score}<span> / 100</span></div>
     <div class="result-stats">${[
       ["correct", "good"],
       ["wrong", "bad"],
@@ -842,11 +885,28 @@ function renderResults(test, run, result) {
       .join(
         "",
       )}</div>${result.review ? `<p>${t("excluded", { n: result.review })}</p>` : ""}
+    ${renderQuestionTimes(test, run)}
     <div class="result-actions"><button class="button button-outline" data-action="review">${icon("eye")}${t("review")}</button><button class="button button-primary" data-action="restart">${icon("rotate-clockwise")}${t("restart")}</button>${test.id !== "wrong" && getTest("wrong") ? `<button class="button button-outline" data-test="wrong">${t("wrongTest")}</button>` : ""}</div><button class="text-button" data-action="home">${icon("arrow-left")}${t("backHome")}</button></section>`;
 }
 
+function renderQuestionTimes(test, run) {
+  const total = Object.values(run.questionMs).reduce(
+    (sum, elapsed) => sum + elapsed,
+    0,
+  );
+  const displayTime = (elapsed) =>
+    elapsed === undefined ? "—" : formatTime(Math.floor(elapsed / 1000));
+  return `<div class="result-timing">
+    <div class="total-time"><strong>${t("totalTime")}</strong><span id="result-total-time">${displayTime(total || (run.timingPartial ? undefined : 0))}</span></div>
+    ${run.timingPartial ? `<p>${t("timingPartial")}</p>` : ""}
+    <details class="question-times" open><summary>${t("questionTimes")}</summary>
+      <ol>${test.questions.map((question, index) => `<li><button type="button" data-index="${index}"><span lang="en">${esc(question.prompt)}</span><span class="question-time">${displayTime(run.questionMs[index])}</span></button></li>`).join("")}</ol>
+    </details>
+  </div>`;
+}
+
 function remainingSeconds(run) {
-  return Math.max(0, Math.ceil((run.deadline - Date.now()) / 1000));
+  return Math.ceil((run.deadline - Date.now()) / 1000);
 }
 
 function formatTime(seconds) {
@@ -855,7 +915,8 @@ function formatTime(seconds) {
 
 function timerLabel(run) {
   const seconds = remainingSeconds(run);
-  return `<div class="test-timer${seconds <= 60 ? " is-urgent" : ""}"><span>${t("timeLeft")}</span><strong role="timer" aria-label="${t("timeLeft")}" id="test-countdown">${formatTime(seconds)}</strong></div>`;
+  const label = t(seconds < 0 ? "overtime" : "timeLeft");
+  return `<div class="test-timer${seconds <= 60 ? " is-urgent" : ""}"><span id="timer-label">${label}</span><strong role="timer" aria-labelledby="timer-label" id="test-countdown">${seconds < 0 ? "+" : ""}${formatTime(Math.abs(seconds))}</strong></div>`;
 }
 
 function renderPractice() {
@@ -863,13 +924,12 @@ function renderPractice() {
   const run = runFor();
   const result = summarize(test, run);
   const answered = progress(test, run);
-  return `<div class="practice-toolbar"><div><p class="practice-caption">${t(run.finished ? "reviewMode" : "practice")}</p><h1 class="practice-title">${esc(title(test))}</h1><p class="practice-subtitle">${t("inProgress", { n: answered, total: test.questions.length })}</p></div><div class="toolbar-right">${run.finished ? "" : timerLabel(run)}<button class="button button-outline button-small" data-action="${run.finished ? "results" : "finish"}">${t(run.finished ? "showResults" : "finish")}</button></div></div>
+  return `<div class="practice-toolbar"><div><p class="practice-caption">${t(run.finished ? "reviewMode" : "practice")}</p><h1 class="practice-title">${esc(title(test))}</h1><p class="practice-subtitle">${t("inProgress", { n: answered, total: test.questions.length })}</p></div><div class="toolbar-right"><button class="button button-outline button-small" data-action="${run.finished ? "results" : "finish"}">${t(run.finished ? "showResults" : "finish")}</button>${run.finished ? "" : timerLabel(run)}</div></div>
     <div class="progress-track practice-progress" role="progressbar" aria-label="${t("answered")}" aria-valuemin="0" aria-valuemax="${test.questions.length}" aria-valuenow="${answered}"><div class="progress-fill" style="width:${(answered / test.questions.length) * 100}%"></div></div>
     <div class="practice-grid"><div class="quiz-column">${run.results ? renderResults(test, run, result) : renderQuestion(test, run)}</div>${renderMap(test, run)}</div>${footnote()}`;
 }
 
 function render() {
-  if (expireRuns()) save();
   $("local-status").textContent = t(canSave() ? "saved" : "sessionOnly");
   $("page-label").textContent =
     view === "home" ? t("home") : title(currentTest());
@@ -877,6 +937,7 @@ function render() {
   $("main").innerHTML =
     `${!storageAvailable ? `<p class="storage-note" role="status">${t("storage")}</p>` : ""}${view === "home" ? renderHome() : renderPractice()}`;
   renderMenu();
+  syncQuestionClock();
 }
 
 function setDrawer(open, focus = true) {
@@ -889,6 +950,7 @@ function setDrawer(open, focus = true) {
 
 function readRoute() {
   clearTimeout(advanceTimer);
+  checkpointQuestion();
   const id = location.hash.startsWith("#test/") ? location.hash.slice(6) : "";
   const test = getTest(id);
   view = test ? "test" : "home";
@@ -929,6 +991,7 @@ function focusQuestion(scroll = false) {
 
 function goToQuestion(index) {
   clearTimeout(advanceTimer);
+  checkpointQuestion();
   const run = runFor();
   run.index = Math.max(0, Math.min(currentTest().questions.length - 1, index));
   run.results = false;
@@ -937,7 +1000,7 @@ function goToQuestion(index) {
   focusQuestion(true);
 }
 
-function finalizeRun(test, run, timedOut = false) {
+function finalizeRun(test, run) {
   if (run.finished) return;
   state.history.push({
     ...summarize(test, run),
@@ -947,38 +1010,49 @@ function finalizeRun(test, run, timedOut = false) {
   recordCoverage(state, test, run);
   run.finished = true;
   run.results = true;
-  run.timedOut = timedOut;
 }
 
-function expireRuns() {
-  let changed = false;
-  const now = Date.now();
-  for (const [id, run] of Object.entries(state.runs)) {
-    if (run.finished || !Number.isFinite(run.deadline) || run.deadline > now)
-      continue;
-    const test = getTest(id);
-    if (!test) continue;
-    finalizeRun(test, run, true);
-    changed = true;
-    if (view === "test" && id === state.active) {
-      clearTimeout(advanceTimer);
-      if ($("confirmation").open) $("confirmation").close("timeout");
-      $("announcer").textContent = t("timeUp");
-    }
-  }
-  return changed;
+function checkpointQuestion(now = performance.now()) {
+  if (!questionClock) return;
+  const { run, index, since } = questionClock;
+  run.questionMs[index] =
+    (run.questionMs[index] ?? 0) + Math.max(0, now - since);
+  questionClock.since = now;
+}
+
+function syncQuestionClock() {
+  const run = view === "test" ? runFor() : null;
+  const tracking =
+    run && !run.finished && !document.hidden && !$("search-dialog").open;
+  if (
+    tracking &&
+    questionClock?.run === run &&
+    questionClock.index === run.index
+  )
+    return;
+  const now = performance.now();
+  checkpointQuestion(now);
+  questionClock = tracking ? { run, index: run.index, since: now } : null;
 }
 
 function updateCountdown() {
-  if (expireRuns()) {
+  const now = performance.now();
+  if (questionClock && now - questionClock.since >= 5000) {
+    checkpointQuestion(now);
     save();
-    render();
-    return;
   }
   const countdown = $("test-countdown");
   if (!countdown || view !== "test") return;
   const seconds = remainingSeconds(runFor());
-  countdown.textContent = formatTime(seconds);
+  const label = $("timer-label");
+  const overtime = seconds < 0;
+  const description = t(overtime ? "overtime" : "timeLeft");
+  if (label.textContent !== description) {
+    label.textContent = description;
+    if (overtime) $("announcer").textContent = t("timeUp");
+  }
+  const text = `${overtime ? "+" : ""}${formatTime(Math.abs(seconds))}`;
+  if (countdown.textContent !== text) countdown.textContent = text;
   countdown.parentElement.classList.toggle("is-urgent", seconds <= 60);
 }
 
@@ -986,7 +1060,8 @@ function finishTest() {
   clearTimeout(advanceTimer);
   const run = runFor();
   if (run.finished) return;
-  finalizeRun(currentTest(), run, remainingSeconds(run) === 0);
+  checkpointQuestion();
+  finalizeRun(currentTest(), run);
   save();
   render();
   focusQuestion(true);
@@ -1002,6 +1077,79 @@ function askToFinish() {
   $("confirm-finish").textContent = t("finish");
   $("confirmation").returnValue = "";
   $("confirmation").showModal();
+}
+
+function searchText(value) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function renderSearchResults() {
+  const query = searchText($("search-input").value);
+  const output = $("search-results");
+  if (query.length < 2) {
+    $("search-status").textContent = t("searchHint");
+    output.replaceChildren();
+    return;
+  }
+  const terms = query.split(" ");
+  const matches = searchIndex
+    .flatMap(({ question, prompt, choices }) => {
+      if (
+        !terms.every((term) => prompt.includes(term) || choices.includes(term))
+      )
+        return [];
+      const rank = prompt.includes(query)
+        ? 2
+        : terms.every((term) => prompt.includes(term))
+          ? 1
+          : 0;
+      return [{ question, rank }];
+    })
+    .sort((a, b) => b.rank - a.rank);
+  $("search-status").textContent = matches.length
+    ? t("searchCount", { n: matches.length })
+    : t("searchEmpty");
+  output.innerHTML = matches
+    .map(
+      (
+        { question },
+        index,
+      ) => `<details class="search-match" ${index === 0 ? "open" : ""}>
+    <summary><span lang="en">${esc(question.prompt)}</span><small>${esc(title({ id: question.source }))} · ${t("question")} ${Number(question.key.split("/")[1]) + 1}</small></summary>
+    <ol type="A" lang="en">${question.options.map((option) => `<li>${esc(option)}</li>`).join("")}</ol>
+    <button class="button button-outline button-small" type="button" data-search-key="${esc(question.key)}">${t("openQuestion")} ${icon("arrow-right")}</button>
+  </details>`,
+    )
+    .join("");
+}
+
+function openSearch() {
+  clearTimeout(advanceTimer);
+  $("search-dialog").showModal();
+  syncQuestionClock();
+  save();
+  renderSearchResults();
+  $("search-input").focus();
+}
+
+function openSearchQuestion(key) {
+  const question = questionsByKey.get(key);
+  if (!question) return;
+  const index = Number(question.key.split("/")[1]);
+  $("search-dialog").close();
+  const hash = `#test/${question.source}`;
+  if (location.hash !== hash) {
+    // Use the normal test route without rendering the old question first.
+    history.pushState(null, "", hash);
+    readRoute();
+    window.scrollTo({ top: 0 });
+  }
+  goToQuestion(index);
 }
 
 function performAction(action) {
@@ -1061,6 +1209,8 @@ function performAction(action) {
 }
 
 document.addEventListener("click", (event) => {
+  const searchResult = event.target.closest("[data-search-key]");
+  if (searchResult) return openSearchQuestion(searchResult.dataset.searchKey);
   const consentButton = event.target.closest("[data-consent]");
   if (consentButton) return chooseStorage(consentButton.dataset.consent);
   const testButton = event.target.closest("[data-test]");
@@ -1096,12 +1246,12 @@ $("main").addEventListener("change", (event) => {
   if (event.target.name !== "answer" || view !== "test") return;
   const run = runFor();
   if (run.finished || Number.isInteger(run.choices[run.index])) return;
-  if (!remainingSeconds(run)) return updateCountdown();
   const questionIndex = run.index;
   const test = currentTest();
   const choice = Number(event.target.value);
   run.choices[questionIndex] = choice;
   const answer = test.questions[questionIndex].answer;
+  checkpointQuestion();
   save();
   render();
   $("question-title")?.focus({ preventScroll: true });
@@ -1119,11 +1269,19 @@ $("main").addEventListener("change", (event) => {
       run.index !== questionIndex
     )
       return;
-    if (!remainingSeconds(run)) return updateCountdown();
     if (questionIndex + 1 < test.questions.length)
       goToQuestion(questionIndex + 1);
     else if (summarize(test, run).blank === 0) finishTest();
   }, 550);
+});
+$("search-open").addEventListener("click", openSearch);
+$("search-close").addEventListener("click", () => $("search-dialog").close());
+$("search-input").addEventListener("input", renderSearchResults);
+$("search-dialog").addEventListener("close", syncQuestionClock);
+$("search-dialog").addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  $("search-dialog").close();
 });
 $("theme-toggle").addEventListener("click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
@@ -1185,6 +1343,7 @@ document.addEventListener("keydown", (event) => {
   if (
     view !== "test" ||
     $("confirmation").open ||
+    $("search-dialog").open ||
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
@@ -1200,8 +1359,20 @@ document.addEventListener("keydown", (event) => {
 readRoute();
 renderChrome();
 setInterval(updateCountdown, 250);
-window.addEventListener("pageshow", updateCountdown);
-document.addEventListener("visibilitychange", updateCountdown);
+window.addEventListener("pageshow", () => {
+  syncQuestionClock();
+  updateCountdown();
+});
+document.addEventListener("visibilitychange", () => {
+  syncQuestionClock();
+  save();
+  updateCountdown();
+});
+window.addEventListener("pagehide", () => {
+  checkpointQuestion();
+  questionClock = null;
+  save();
+});
 new ResizeObserver(() => {
   if (consentOpen)
     document.body.style.setProperty(

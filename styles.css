@@ -1747,7 +1747,6 @@ dialog::backdrop {
   color: var(--muted);
 }
 .answer-note.incorrect-note,
-.results .time-up,
 .test-timer.is-urgent {
   color: var(--bad);
 }
@@ -1764,6 +1763,109 @@ dialog::backdrop {
   font:
     650 15px ui-monospace,
     monospace;
+}
+.toolbar-right {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.result-timing {
+  margin-top: 24px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+}
+.total-time,
+.question-times li button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.total-time span,
+.question-time {
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.question-times {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.question-times summary,
+.search-match summary {
+  cursor: pointer;
+}
+.question-times ol {
+  padding-inline-start: 24px;
+  max-height: 360px;
+  overflow: auto;
+}
+.question-times li button {
+  width: 100%;
+  padding: 8px 4px 8px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.question-times li button:hover {
+  color: var(--accent);
+}
+#search-dialog {
+  width: min(680px, calc(100vw - 24px));
+  max-height: min(760px, 90vh);
+  max-height: min(760px, 90dvh);
+}
+.search-content {
+  padding: clamp(14px, 4vw, 24px);
+}
+.search-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#search-input {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text);
+  font-size: 16px;
+}
+#search-status {
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.search-match {
+  padding: 12px;
+  margin-block: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.search-match summary small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.search-match li {
+  margin-bottom: 6px;
+  white-space: pre-line;
+}
+@media (max-width: 679px) {
+  #search-open span {
+    display: none;
+  }
+  #search-open {
+    padding-inline: 8px;
+  }
 }
 .storage-banner {
   position: fixed;

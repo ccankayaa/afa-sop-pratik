@@ -6,7 +6,9 @@ Diamond DA20-C1 için bağımsız, kişisel SOP çalışma uygulaması. **6 test
 
 Sol menüden seçilen test doğrudan soru ekranında açılır. Cevabı gösterme, soru işaretleme, soru haritası, önceki/sonraki gezinme, test sonucu ve yeniden çözme desteklenir. Ana sayfada toplam çözülen, doğru/yanlış cevap, tam biten test, test başına ortalama doğru yüzdesi ve doğru sayısı gösterilir. İstatistikler test ekranında bulunmaz.
 
-Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmızı kalır ve başka bir soruya geçmek için gezinme düğmesi veya soru haritası kullanılır. Her soru için 75 saniye verilir. Süre tam dakikaya yuvarlanır ve test başına en az 5 dakikadır. Süre dolduğunda test otomatik bitirilir.
+Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmızı kalır ve başka bir soruya geçmek için gezinme düğmesi veya soru haritası kullanılır. Her soru için 75 saniye verilir. Süre tam dakikaya yuvarlanır ve test başına en az 5 dakikadır. Süre dolunca sayaç ek süreyi göstermeye başlar ve teste devam edilebilir. Sonuçta her sorunun açık ve sekmenin görünür olduğu süre ile bunların toplamı gösterilir. Soru araması açıkken geçirilen süre bu ölçüme dahil edilmez.
+
+Üst menüdeki **Soru ara** düğmesi tüm soru ve şıklarda kelime arar. Sonuçları şıklarıyla açabilir ve doğrudan ilgili soruya gidebilirsin.
 
 Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar. Altı kaynak testin tüm puanlı soruları cevaplanıp testler bitirildikten sonra, hatalı cevaplanan sorular **Yanlışları tekrar çöz** testinde toplanır. Bu koşul birleşik ve tüm soruları içeren testlerle de karşılanabilir.
 
