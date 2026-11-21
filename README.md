@@ -12,7 +12,9 @@ Her sorunun sol üstünde benzersiz bir ID görünür. Üst menüdeki **Soru ara
 
 Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar. Altı kaynak testin tüm puanlı soruları cevaplanıp testler bitirildikten sonra, hatalı cevaplanan sorular **Yanlışları tekrar çöz** testinde toplanır. Bu koşul birleşik ve tüm soruları içeren testlerle de karşılanabilir.
 
-Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri kabul et** seçenekleri dil ve tema seçimini tarayıcıda hatırlar. **Kabul et** ile ilerleme, sonuçlar ve testin başlangıç zamanı da yerel depolamada tutulur. Süre tarayıcı kapalıyken işlemeye devam eder. **Reddet** yerel kayıtları ve tercih çerezini siler. Çerez tercihleri sol menünün altından değiştirilebilir. Uygulama kullanıcı verilerini sunucuda saklamaz.
+**Görülmemiş sorular** testini açtığında, o an daha önce soru ekranında açmadığın sorulardan yeni bir liste oluşturulur. Çözüm yüzdesi, en az bir kez cevaplanan benzersiz soruların tüm bankaya oranıdır. Test kartları deneme ve tekrar sayısını, soru kartları cevaplama sayısını gösterir. Ortalama puan, gönderilen puanlı testlerin 100 üzerinden puanlarının ortalamasıdır. Eski sürümde soru bazında kayıt tutulmadığı için önceki sayılar eldeki denemelerden çıkarılır.
+
+Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri kabul et** seçenekleri dil ve tema seçimini tarayıcıda hatırlar. **Kabul et** ile ilerleme, sonuçlar ve testin başlangıç zamanı da yerel depolamada tutulur. Süre tarayıcı kapalıyken işlemeye devam eder. **Reddet** yerel kayıtları ve tercih çerezini siler. Çerez tercihleri sol menünün altından değiştirilebilir.
 
 ## Çalıştırma ve Vercel
 
@@ -23,6 +25,8 @@ python -m http.server 4173
 ```
 
 Ardından `http://localhost:4173` adresini açın. Vercel'de depoyu içe aktarın; framework **Other**, çıktı klasörü **.**, install/build komutları boş olmalıdır. `vercel.json` bu ayarları içerir. Git entegrasyonu bağlıysa `main` dalına gönderilen commit otomatik yayımlanır.
+
+[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) etkinleştirildikten sonra canlı sitede yalnızca anonim ziyaret analizini ayrıca işaretleyip kabul edenlerden sayfa ziyareti ölçülür. Cevaplar ve arama metni gönderilmez. Ülke ve tarayıcı kırılımları **Analytics** bölümünde, **Visitors online** göstergesi Vercel genel bakışındaki proje kartında bulunur.
 
 ## Puanlama
 

@@ -4,6 +4,7 @@ const tests = window.QUESTION_BANK;
 const storageKey = "afa-sop-pratik:v1";
 const preferenceKey = "afa-sop-pratik:preferences";
 const consentCookie = "afa_sop_storage";
+const analyticsCookie = "afa_sop_analytics";
 const allQuestions = tests.flatMap((test) =>
   test.questions.map((question, index) => ({
     ...question,
@@ -37,6 +38,15 @@ const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const mobile = matchMedia("(max-width: 959px)");
 const strings = {
   tr: {
+    unseen: "Görülmemiş sorular",
+    solvedCoverage: "Soru bankası ilerlemesi",
+    solvedCoverageDetail: "{n}/{total} benzersiz soru cevaplandı",
+    averageScore: "Ortalama puan",
+    averageScoreDetail: "Gönderilen testler · 100 üzerinden",
+    testAttempts: "{n} deneme · {repeats} tekrar",
+    questionAttempts: "{n} kez cevaplandı",
+    noUnseen: "Tüm soruları gördün.",
+    analyticsConsent: "Anonim ziyaret analizine izin ver (Vercel)",
     appName: "SOP Pratik",
     allQuestions: "Tüm soruları çöz",
     combine: "Testleri birleştir",
@@ -65,7 +75,8 @@ const strings = {
     necessaryStorage: "Yalnızca gereklileri kabul et",
     rejectStorage: "Reddet",
     storageSettings: "Çerez tercihleri",
-    privacy: "Kullanıcıların herhangi bir bilgisi sunucularda tutulmamaktadır.",
+    privacy:
+      "Cevaplar ve çalışma kayıtları tarayıcıda kalır. İzin verirsen Vercel anonim ziyaret istatistikleri toplar.",
     sessionOnly: "İlerleme yalnızca açık sayfada tutulur",
     home: "Ana sayfa",
     dashboard: "Çalışma paneli",
@@ -159,6 +170,15 @@ const strings = {
       "Kaynakta True işaretli; aynı belgedeki diğer soru fren kullanımının kalkış mesafesini artırdığını belirtiyor. Bu çelişki nedeniyle soru puan dışıdır.",
   },
   en: {
+    unseen: "Unseen questions",
+    solvedCoverage: "Question bank progress",
+    solvedCoverageDetail: "{n}/{total} unique questions answered",
+    averageScore: "Average score",
+    averageScoreDetail: "Submitted tests · out of 100",
+    testAttempts: "{n} attempts · {repeats} repeats",
+    questionAttempts: "Answered {n} times",
+    noUnseen: "You’ve seen every question.",
+    analyticsConsent: "Allow anonymous visitor analytics (Vercel)",
     appName: "SOP Practice",
     allQuestions: "Practice all questions",
     combine: "Combine tests",
@@ -188,7 +208,8 @@ const strings = {
     necessaryStorage: "Accept essentials only",
     rejectStorage: "Reject",
     storageSettings: "Cookie preferences",
-    privacy: "No user information is stored on servers.",
+    privacy:
+      "Answers and study records stay in your browser. If you opt in, Vercel collects anonymous visitor analytics.",
     sessionOnly: "Progress is kept only while this page is open",
     home: "Home",
     dashboard: "Study dashboard",
@@ -292,6 +313,7 @@ const testTitles = {
 };
 let storageAvailable = true;
 let consent = readConsent();
+let analyticsAllowed = readAnalyticsConsent();
 let consentOpen = !consent;
 let state = restore();
 let drawerOpen = false;
@@ -316,7 +338,9 @@ const title = (test) =>
       ? "allQuestions"
       : test.id === "wrong"
         ? "wrongTest"
-        : "mixedTest",
+        : test.id === "unseen"
+          ? "unseen"
+          : "mixedTest",
   );
 
 function getTest(id, data = state) {
@@ -327,6 +351,12 @@ function getTest(id, data = state) {
       questions: allQuestions.filter((question) => question.source === id),
     };
   if (id === "all") return { id, questions: allQuestions };
+  if (id === "unseen") {
+    const questions =
+      data.runs.unseen?.keys?.map((key) => questionsByKey.get(key)) ??
+      unseenQuestions(data);
+    return questions.length ? { id, questions } : undefined;
+  }
   if (id === "wrong") {
     const keys = data.runs.wrong?.keys ?? data.missed;
     return keys.length && tests.every((test) => data.covered.includes(test.id))
@@ -361,7 +391,7 @@ const newRun = (test) => ({
   results: false,
   startedAt: Date.now(),
   questionMs: {},
-  ...(test.id === "wrong"
+  ...(["wrong", "unseen"].includes(test.id)
     ? { keys: test.questions.map((question) => question.key) }
     : {}),
 });
@@ -373,6 +403,42 @@ function readConsent() {
     .find((cookie) => cookie.startsWith(`${consentCookie}=`));
   const value = entry?.slice(consentCookie.length + 1);
   return ["accepted", "essential"].includes(value) ? value : null;
+}
+
+function readAnalyticsConsent() {
+  return (
+    readConsent() === "accepted" &&
+    document.cookie.split("; ").includes(`${analyticsCookie}=yes`)
+  );
+}
+
+function startAnalytics() {
+  if (
+    !analyticsAllowed ||
+    !readAnalyticsConsent() ||
+    location.origin !== "https://afa-sop-pratik.vercel.app" ||
+    $("vercel-analytics")
+  )
+    return;
+  window.va =
+    window.va ||
+    function () {
+      (window.vaq = window.vaq || []).push(arguments);
+    };
+  window.va("beforeSend", (event) => {
+    if (
+      !analyticsAllowed ||
+      !readAnalyticsConsent() ||
+      event.type !== "pageview"
+    )
+      return null;
+    return { ...event, url: `${location.origin}/` };
+  });
+  const script = document.createElement("script");
+  script.id = "vercel-analytics";
+  script.src = "/_vercel/insights/script.js";
+  script.defer = true;
+  document.head.append(script);
 }
 
 function restore() {
@@ -394,6 +460,8 @@ function restore() {
     history: [],
     covered: [],
     missed: [],
+    seen: [],
+    attempts: {},
   };
   if (!saved || typeof saved !== "object") return restored;
   restored.collapsed = saved.collapsed === true;
@@ -404,7 +472,7 @@ function restore() {
         ["total", "answered", "correct", "wrong", "blank"].every(
           (key) => Number.isFinite(result[key]) && result[key] >= 0,
         ) &&
-        result.total > 0,
+        result.total >= 0,
     );
   restored.covered = tests
     .map((test) => test.id)
@@ -416,13 +484,34 @@ function restore() {
         ),
     );
   restored.missed = validKeys(saved.missed);
+  const seen = new Set(
+    Array.isArray(saved.seen)
+      ? saved.seen.filter((id) => questionsById.has(id))
+      : [],
+  );
+  const hasAttemptTotals = saved.attempts && typeof saved.attempts === "object";
+  if (hasAttemptTotals) {
+    for (const [id, count] of Object.entries(saved.attempts)) {
+      if (questionsById.has(id) && Number.isSafeInteger(count) && count > 0) {
+        restored.attempts[id] = count;
+        seen.add(id);
+      }
+    }
+  }
+  for (const question of allQuestions) {
+    if (!restored.covered.includes(question.source) || question.answer === null)
+      continue;
+    seen.add(question.questionId);
+  }
   for (const [id, old] of Object.entries(saved.runs ?? {})) {
     if (!old || typeof old !== "object") continue;
-    const keys = validKeys(old.keys);
-    if (id === "wrong" && keys.length) restored.runs.wrong = { keys };
+    const generated = id === "wrong" || id === "unseen";
+    const keys = validKeys(old.keys, id === "unseen");
+    if (generated && !keys.length) continue;
+    if (generated) restored.runs[id] = { keys };
     const test = getTest(id, restored);
     if (!test) {
-      if (id === "wrong") delete restored.runs.wrong;
+      if (generated) delete restored.runs[id];
       continue;
     }
     const run = {
@@ -442,7 +531,7 @@ function restore() {
           : null,
       questionMs: {},
       timingPartial: old.timingPartial === true || !old.questionMs,
-      ...(id === "wrong"
+      ...(generated
         ? { keys: test.questions.map((question) => question.key) }
         : {}),
     };
@@ -459,9 +548,31 @@ function restore() {
       const elapsed = old.questionMs?.[index];
       if (Number.isFinite(elapsed) && elapsed >= 0)
         run.questionMs[index] = elapsed;
+      const questionId = question.questionId;
+      if (
+        index === run.index ||
+        run.choices[index] !== undefined ||
+        run.revealed[index] ||
+        run.flags[index] ||
+        run.questionMs[index] !== undefined
+      )
+        seen.add(questionId);
+      if (!hasAttemptTotals && run.choices[index] !== undefined)
+        restored.attempts[questionId] =
+          (restored.attempts[questionId] ?? 0) + 1;
     });
     restored.runs[test.id] = run;
   }
+  if (!hasAttemptTotals) {
+    for (const question of allQuestions) {
+      if (
+        restored.covered.includes(question.source) &&
+        question.answer !== null
+      )
+        restored.attempts[question.questionId] ??= 1;
+    }
+  }
+  restored.seen = [...seen];
   for (const [id, run] of Object.entries(restored.runs)) {
     if (run.finished && id !== "wrong")
       recordCoverage(restored, getTest(id, restored), run);
@@ -471,18 +582,31 @@ function restore() {
   return restored;
 }
 
-function validKeys(items) {
+function validKeys(items, includeUnscored = false) {
   return Array.isArray(items)
     ? [
         ...new Set(
           items.filter(
             (key) =>
               questionsByKey.has(key) &&
-              questionsByKey.get(key).answer !== null,
+              (includeUnscored || questionsByKey.get(key).answer !== null),
           ),
         ),
       ]
     : [];
+}
+
+function unseenQuestions(data = state) {
+  const seen = new Set(data.seen);
+  return allQuestions.filter((question) => !seen.has(question.questionId));
+}
+
+function testAttempts(id) {
+  const run = state.runs[id];
+  return (
+    state.history.filter((result) => result.testId === id).length +
+    Number(Boolean(run && !run.finished && Object.keys(run.choices).length))
+  );
 }
 
 function readPreferences() {
@@ -594,7 +718,8 @@ function metricData() {
     if (!test) return;
     if (run && !run.finished) add(summarize(test, run));
   });
-  const full = state.history.filter((result) => result.blank === 0);
+  const scored = state.history.filter((result) => result.total > 0);
+  const full = scored.filter((result) => result.blank === 0);
   const average = (fn) =>
     full.length
       ? full.reduce((sum, result) => sum + fn(result), 0) / full.length
@@ -604,11 +729,18 @@ function metricData() {
     count: full.length,
     percent: average((result) => (result.correct / result.total) * 100),
     correct: average((result) => result.correct),
+    averageScore: scored.length
+      ? scored.reduce(
+          (sum, result) => sum + (result.correct / result.total) * 100,
+          0,
+        ) / scored.length
+      : null,
   };
 }
 
 function renderMenu() {
   const wrong = getTest("wrong");
+  const unseen = getTest("unseen");
   $("sidebar-nav").innerHTML =
     `<button class="nav-home" data-action="home" ${view === "home" ? 'aria-current="page"' : ""} title="${t("home")}">${icon("layout-dashboard")}<span class="home-label">${t("home")}</span></button>
     <div class="nav-section"><span>${t("tests")}</span><span>06</span></div>
@@ -623,6 +755,7 @@ function renderMenu() {
       .join("")}
     <div class="sidebar-tools">
       ${menuShortcut(getTest("all"), "book-2")}
+      ${unseen ? menuShortcut(unseen, "eye-off") : ""}
       <button class="nav-home" data-action="toggle-combine" aria-expanded="${combining}" aria-label="${t("combine")}" title="${t("combine")}">${icon("arrows-maximize")}<span class="home-label">${t("combine")}</span></button>
       ${combining ? `<button class="button button-primary combine-start" data-action="start-combined" aria-label="${t("startCombined", { n: selectedTests.size })}" title="${t("startCombinedHint")}" ${selectedTests.size < 2 ? "disabled" : ""}>${icon("arrow-right")}<span class="home-label">${t("startCombined", { n: selectedTests.size })}</span></button>` : ""}
       ${wrong ? menuShortcut(wrong, "rotate-clockwise") : ""}
@@ -639,7 +772,8 @@ function renderStorageBanner() {
   banner.hidden = !consentOpen;
   document.body.classList.toggle("storage-banner-open", consentOpen);
   if (!consentOpen) return;
-  banner.innerHTML = `<div><h2 id="storage-title">${t("storageTitle")}</h2><p>${t("storageIntro")}</p></div>
+  banner.innerHTML = `<div><h2 id="storage-title">${t("storageTitle")}</h2><p>${t("storageIntro")}</p>
+    <label class="analytics-consent"><input type="checkbox" id="analytics-opt-in" ${analyticsAllowed ? "checked" : ""}>${t("analyticsConsent")}</label></div>
     <div class="storage-actions">
       <button class="button button-primary" data-consent="accepted">${t("acceptStorage")}</button>
       <button class="button button-outline" data-consent="essential">${t("necessaryStorage")}</button>
@@ -653,6 +787,8 @@ function renderStorageBanner() {
 
 function chooseStorage(choice) {
   checkpointQuestion();
+  analyticsAllowed =
+    choice === "accepted" && Boolean($("analytics-opt-in")?.checked);
   const previous = consent;
   consent = choice;
   consentOpen = false;
@@ -662,6 +798,7 @@ function chooseStorage(choice) {
     document.cookie = `${consentCookie}=; Max-Age=0; ${attributes}`;
   else
     document.cookie = `${consentCookie}=${choice}; Max-Age=31536000; ${attributes}`;
+  document.cookie = `${analyticsCookie}=${analyticsAllowed ? "yes" : ""}; Max-Age=${analyticsAllowed ? 31536000 : 0}; ${attributes}`;
 
   if (choice === "accepted" && previous !== "accepted") {
     const saved = restore();
@@ -676,7 +813,11 @@ function chooseStorage(choice) {
       history: [...saved.history, ...session.history],
       covered: [...new Set([...saved.covered, ...session.covered])],
       missed: [...new Set([...saved.missed, ...session.missed])],
+      seen: [...new Set([...saved.seen, ...session.seen])],
+      attempts: { ...saved.attempts },
     };
+    for (const [id, count] of Object.entries(session.attempts))
+      state.attempts[id] = (state.attempts[id] ?? 0) + count;
     save();
   } else if (choice !== "accepted") {
     try {
@@ -689,6 +830,7 @@ function chooseStorage(choice) {
   savePreferences();
   readRoute();
   renderChrome();
+  startAnalytics();
   $("main").focus({ preventScroll: true });
 }
 
@@ -777,6 +919,31 @@ function footnote() {
 function renderHome() {
   const data = metricData();
   const wrong = getTest("wrong");
+  const unseen = getTest("unseen");
+  const remaining = unseenQuestions().length;
+  const solved = Object.keys(state.attempts).length;
+  const coverageCards = [
+    [
+      "eye-off",
+      "unseen",
+      num(remaining),
+      remaining
+        ? `${num(allQuestions.length - remaining)}/${allQuestions.length}`
+        : t("noUnseen"),
+    ],
+    [
+      "target",
+      "solvedCoverage",
+      `${num((solved / allQuestions.length) * 100)}%`,
+      t("solvedCoverageDetail", { n: solved, total: allQuestions.length }),
+    ],
+    [
+      "chart-line",
+      "averageScore",
+      data.averageScore === null ? "—" : num(data.averageScore),
+      t("averageScoreDetail"),
+    ],
+  ];
   const cards = [
     ["clipboard-check", "solved", num(data.totals.answered), "", "allAttempts"],
     [
@@ -798,21 +965,28 @@ function renderHome() {
   ];
   return `<section aria-labelledby="home-title"><div class="page-heading"><div><h1 id="home-title">${t("dashboard")}</h1><p>${t("intro")}</p></div><span class="aircraft-tag">${icon("plane")} DIAMOND DA20-C1</span></div>
     <div class="metrics">${cards.map(([symbol, label, value, color, help]) => `<div class="metric ${color}" title="${t(help)}"><div class="metric-top"><span>${t(label)}</span>${icon(symbol)}</div><strong class="metric-value">${value}</strong><p class="metric-detail">${label === "average" ? t("correctPerTest", { n: data.count ? num(data.correct) : "—" }) : t(label === "fullTests" ? "fullOnly" : "allAttempts")}</p></div>`).join("")}</div>
+    <div class="coverage-grid">${coverageCards.map(([symbol, label, value, detail]) => `<div class="metric" data-metric="${label}"><div class="metric-top"><span>${t(label)}</span>${icon(symbol)}</div><strong class="metric-value">${value}</strong><p class="metric-detail">${detail}</p></div>`).join("")}</div>
     <div class="section-heading"><div><h2>${t("tests")}</h2><p>${t("selectTest")}</p></div><span>${t("bank")}</span></div>
     <div class="test-grid">${[
       ...tests,
       getTest("all"),
+      ...(unseen ? [unseen] : []),
       ...(wrong ? [wrong] : []),
+      ...Object.keys(state.runs)
+        .filter((id) => id.startsWith("mix-"))
+        .map((id) => getTest(id))
+        .filter(Boolean),
     ]
       .map((test, index) => {
         const run = state.runs[test.id];
         const answered = progress(test, run);
+        const attempts = testAttempts(test.id);
         const status = run?.finished
           ? t("completed")
           : answered
             ? t("inProgress", { n: answered, total: test.questions.length })
             : t("notStarted");
-        return `<button class="test-card" data-test="${test.id}"><span class="test-card-number">${index < tests.length ? String(index + 1).padStart(2, "0") : icon(test.id === "all" ? "book-2" : "rotate-clockwise")}</span><div class="test-card-copy"><h3>${esc(title(test))}</h3><p>${t("questionCount", { n: test.questions.length })} <span>· ${status}</span></p><div class="mini-progress"><span style="width:${(answered / test.questions.length) * 100}%"></span></div></div>${icon("arrow-right")}</button>`;
+        return `<button class="test-card" data-test="${test.id}"><span class="test-card-number">${index < tests.length ? String(index + 1).padStart(2, "0") : icon(test.id === "all" ? "book-2" : test.id === "unseen" ? "eye-off" : "rotate-clockwise")}</span><div class="test-card-copy"><h3>${esc(title(test))}</h3><p>${t("questionCount", { n: test.questions.length })} <span>· ${status}</span></p><p class="test-attempts">${t("testAttempts", { n: attempts, repeats: Math.max(0, attempts - 1) })}</p><div class="mini-progress"><span style="width:${(answered / test.questions.length) * 100}%"></span></div></div>${icon("arrow-right")}</button>`;
       })
       .join("")}</div>
     ${!wrong && tests.every((test) => state.covered.includes(test.id)) ? `<p class="practice-subtitle">${t("wrongEmpty")}</p>` : ""}</section>
@@ -835,7 +1009,7 @@ function renderHome() {
                       },
                     )
                   : "";
-                return `<div class="recent-row">${icon("clipboard-check")}<div>${test ? esc(title(test)) : t("previousAttempt")}<small>${date ? `${esc(date)} · ` : ""}${t(result.blank ? "partial" : "completed")}</small></div><span>${result.correct}/${result.total}</span><strong>${num((result.correct / result.total) * 100)}%</strong></div>`;
+                return `<div class="recent-row">${icon("clipboard-check")}<div>${test ? esc(title(test)) : t("previousAttempt")}<small>${date ? `${esc(date)} · ` : ""}${t(result.blank ? "partial" : "completed")}</small></div><span>${result.correct}/${result.total}</span><strong>${result.total ? `${num((result.correct / result.total) * 100)}%` : "—"}</strong></div>`;
               })
               .join("")}</div>`
           : `<p class="empty-history">${icon("chart-line")}${t("emptyHistory")}</p>`
@@ -896,6 +1070,7 @@ function renderQuestion(test, run) {
   const last = run.index === test.questions.length - 1;
   const nextAction = last ? (run.finished ? "results" : "finish") : "next";
   return `<section class="question-card" aria-labelledby="question-title"><div class="question-meta"><div class="question-reference"><span class="question-id">${esc(question.questionId)}</span><span class="question-number">${t("questionOf", { n: String(run.index + 1).padStart(2, "0"), total: test.questions.length })}</span></div><div class="question-tags"><span class="chip ${unscored ? "warning" : ""}">${t(unscored ? "unscored" : "singleAnswer")}</span></div></div>
+    <p class="question-attempts">${t("questionAttempts", { n: state.attempts[question.questionId] ?? 0 })}</p>
     <h2 id="question-title" class="question-text" lang="en" tabindex="-1">${esc(question.prompt)}</h2>
     <div class="options" role="radiogroup" aria-labelledby="question-title">${question.options
       .map((text, option) => {
@@ -913,7 +1088,7 @@ function renderQuestion(test, run) {
 }
 
 function renderResults(test, run, result) {
-  const score = num((result.correct / result.total) * 100);
+  const score = result.total ? num((result.correct / result.total) * 100) : "—";
   return `<section class="question-card results" aria-labelledby="question-title"><span class="result-emblem">${icon("clipboard-check")}</span><h2 id="question-title" tabindex="-1">${t("resultTitle")}</h2><p>${t("resultSummary", result)}</p><div class="score" aria-label="${t("scoreLabel", { n: score })}">${score}<span> / 100</span></div>
     <div class="result-stats">${[
       ["correct", "good"],
@@ -965,6 +1140,7 @@ function timerLabel(run) {
 function renderPractice() {
   const test = currentTest();
   const run = runFor();
+  if (!run.results) markSeen(test.questions[run.index]);
   const result = summarize(test, run);
   const answered = progress(test, run);
   return `<div class="practice-toolbar"><div><p class="practice-caption">${t(run.finished ? "reviewMode" : "practice")}</p><h1 class="practice-title">${esc(title(test))}</h1><p class="practice-subtitle">${t("inProgress", { n: answered, total: test.questions.length })}</p></div><div class="toolbar-right"><button class="button button-outline button-small" data-action="${run.finished ? "results" : "finish"}">${t(run.finished ? "showResults" : "finish")}</button>${run.finished ? "" : timerLabel(run)}</div></div>
@@ -991,7 +1167,13 @@ function setDrawer(open, focus = true) {
   else if (wasOpen && focus) $("menu-toggle").focus();
 }
 
-function readRoute() {
+function markSeen(question) {
+  if (state.seen.includes(question.questionId)) return;
+  state.seen.push(question.questionId);
+  save();
+}
+
+function readRoute(questionIndex) {
   clearTimeout(advanceTimer);
   checkpointQuestion();
   const id = location.hash.startsWith("#test/") ? location.hash.slice(6) : "";
@@ -1000,6 +1182,10 @@ function readRoute() {
   if (test) {
     state.active = id;
     const run = runFor();
+    if (Number.isInteger(questionIndex)) {
+      run.index = questionIndex;
+      run.results = false;
+    }
     if (!run.finished && run.startedAt === null) run.startedAt = Date.now();
   }
   setDrawer(false, false);
@@ -1186,8 +1372,9 @@ function openSearchQuestion(key) {
   if (location.hash !== hash) {
     // Use the normal test route without rendering the old question first.
     history.pushState(null, "", hash);
-    readRoute();
+    readRoute(index);
     window.scrollTo({ top: 0 });
+    return focusQuestion(true);
   }
   goToQuestion(index);
 }
@@ -1228,6 +1415,10 @@ function performAction(action) {
   if (action === "finish") return askToFinish();
   if (action === "review") return goToQuestion(0);
   if (action === "restart") {
+    if (state.active === "unseen") {
+      if (!unseenQuestions().length) return navigate();
+      delete state.runs.unseen;
+    }
     if (state.active === "wrong") delete state.runs.wrong;
     state.runs[state.active] = newRun(currentTest());
     return goToQuestion(0);
@@ -1291,6 +1482,8 @@ $("main").addEventListener("change", (event) => {
   const choice = Number(event.target.value);
   run.choices[questionIndex] = choice;
   const answer = test.questions[questionIndex].answer;
+  const questionId = test.questions[questionIndex].questionId;
+  state.attempts[questionId] = (state.attempts[questionId] ?? 0) + 1;
   checkpointQuestion();
   save();
   render();
@@ -1398,6 +1591,7 @@ document.addEventListener("keydown", (event) => {
 
 readRoute();
 renderChrome();
+startAnalytics();
 setInterval(updateTimer, 250);
 window.addEventListener("pageshow", () => {
   syncQuestionClock();
