@@ -5,6 +5,8 @@ const storageKey = "afa-sop-pratik:v1";
 const preferenceKey = "afa-sop-pratik:preferences";
 const consentCookie = "afa_sop_storage";
 const analyticsCookie = "afa_sop_analytics";
+const scoringVersion = 2;
+const newlyScoredIds = new Set(["AFA-022", "AFA-037", "AFA-080", "AFA-112"]);
 const allQuestions = tests.flatMap((test) =>
   test.questions.map((question, index) => ({
     ...question,
@@ -163,14 +165,6 @@ const strings = {
     keepGoing: "Çözmeye devam et",
     storage:
       "Tarayıcı depolaması kullanılamıyor. İlerleme yalnızca bu oturumda saklanacak.",
-    note0:
-      "Kaynakta A ve B birlikte işaretli. Tek bir doğru cevap doğrulanamadığı için bu soru puan dışıdır.",
-    note1:
-      "Kaynak bu soruda 20 saniyeyi işaretliyor; aynı belgedeki diğer starter soruları 30 saniye veriyor. Bu soru puan dışıdır. Güncel, kontrollü kaynaktan doğrulayın.",
-    note2:
-      "Kaynakta birden fazla satır işaretli ve tek bir cevap anahtarı doğrulanamıyor. Bu soru puan dışıdır.",
-    note3:
-      "Kaynakta True işaretli; aynı belgedeki diğer soru fren kullanımının kalkış mesafesini artırdığını belirtiyor. Bu çelişki nedeniyle soru puan dışıdır.",
   },
   en: {
     unseen: "Unseen questions",
@@ -298,14 +292,6 @@ const strings = {
     keepGoing: "Keep practicing",
     storage:
       "Browser storage is unavailable. Progress will only be kept for this session.",
-    note0:
-      "Both A and B are marked in the source. A single correct answer could not be verified, so this question is not scored.",
-    note1:
-      "The source marks 20 seconds here, while other starter questions in the same document give 30 seconds. This question is not scored. Verify against a current, controlled source.",
-    note2:
-      "Multiple lines are marked in the source and a single answer key could not be verified. This question is not scored.",
-    note3:
-      "The source marks True, but another question in the document states that braking increases the take-off distance. This conflicting question is not scored.",
   },
 };
 const testTitles = {
@@ -473,8 +459,11 @@ function restore() {
     attempts: {},
     errorCounts: {},
     incorrect: [],
+    scoringVersion,
   };
   if (!saved || typeof saved !== "object") return restored;
+  const needsRescore = (id) =>
+    saved.scoringVersion !== scoringVersion && newlyScoredIds.has(id);
   restored.collapsed = saved.collapsed === true;
   if (Array.isArray(saved.history))
     restored.history = saved.history.filter(
@@ -515,13 +504,17 @@ function restore() {
   if (hasAttemptTotals) {
     for (const [id, count] of Object.entries(saved.attempts)) {
       if (questionsById.has(id) && Number.isSafeInteger(count) && count > 0) {
-        restored.attempts[id] = count;
+        if (!needsRescore(id)) restored.attempts[id] = count;
         seen.add(id);
       }
     }
   }
   for (const question of allQuestions) {
-    if (!restored.covered.includes(question.source) || question.answer === null)
+    if (
+      !restored.covered.includes(question.source) ||
+      question.answer === null ||
+      needsRescore(question.questionId)
+    )
       continue;
     seen.add(question.questionId);
   }
@@ -558,23 +551,25 @@ function restore() {
         : {}),
     };
     test.questions.forEach((question, index) => {
+      const questionId = question.questionId;
       const choice = old.choices?.[index];
+      const changed = needsRescore(questionId);
       if (
+        !changed &&
         Number.isInteger(choice) &&
         choice >= 0 &&
         choice < question.options.length
       )
         run.choices[index] = choice;
-      if (old.revealed?.[index]) run.revealed[index] = true;
+      if (!changed && old.revealed?.[index]) run.revealed[index] = true;
       if (old.flags?.[index]) run.flags[index] = true;
       const elapsed = old.questionMs?.[index];
       if (Number.isFinite(elapsed) && elapsed >= 0)
         run.questionMs[index] = elapsed;
-      const questionId = question.questionId;
       if (
         index === run.index ||
-        run.choices[index] !== undefined ||
-        run.revealed[index] ||
+        Number.isInteger(choice) ||
+        old.revealed?.[index] ||
         run.flags[index] ||
         run.questionMs[index] !== undefined
       )
@@ -602,7 +597,8 @@ function restore() {
     for (const question of allQuestions) {
       if (
         restored.covered.includes(question.source) &&
-        question.answer !== null
+        question.answer !== null &&
+        !needsRescore(question.questionId)
       )
         restored.attempts[question.questionId] ??= 1;
     }
@@ -1178,13 +1174,8 @@ function canSave() {
   return consent === "accepted" && storageAvailable;
 }
 
-function sourceNote(test, index) {
-  // The bank's note is the stable lookup key; numbering can change without losing its translation.
-  const notes = tests.flatMap((item) =>
-    item.questions.filter((q) => q.answer === null).map((q) => q.note),
-  );
-  const position = notes.indexOf(test.questions[index].note);
-  return t(`note${position}`);
+function sourceNote(question) {
+  return esc(question.note?.[state.language] ?? t("unscored"));
 }
 
 function renderQuestion(test, run) {
@@ -1209,7 +1200,7 @@ function renderQuestion(test, run) {
         return `<label class="option${checked && unscored ? " is-neutral" : ""}${correct ? " is-correct" : wrong ? " is-wrong" : ""}${locked ? " is-locked" : ""}"><input type="radio" name="answer" value="${option}" ${checked ? "checked" : ""} ${locked ? "disabled" : ""} aria-label="${letters[option]}. ${esc(text)}${correct ? ` — ${t("correctAnswers")}` : wrong ? ` — ${t("wrongAnswers")}` : ""}" lang="en"><span class="letter" aria-hidden="true">${letters[option]}</span><span class="option-text" lang="en">${esc(text)}</span><span class="option-mark" aria-hidden="true">${correct ? icon("check") : wrong ? icon("x") : checked ? icon("check") : ""}</span></label>`;
       })
       .join("")}</div>
-    ${visible ? (unscored ? `<div class="answer-note warning" role="status">${icon("info-circle")}<span>${sourceNote(test, run.index)}</span></div>` : `<div class="answer-note" role="status">${icon("circle-check")}<span><strong>${t("correctOption", { letter: letters[question.answer] })}</strong><span class="answer-text" lang="en">${esc(question.options[question.answer])}</span></span></div>`) : incorrect ? `<p class="answer-note incorrect-note">${icon("circle-x")}${t("wrongAnswers")}</p>` : ""}
+    ${visible ? (unscored ? `<div class="answer-note warning" role="status">${icon("info-circle")}<span>${sourceNote(question)}</span></div>` : `<div class="answer-note" role="status">${icon("circle-check")}<span><strong>${t("correctOption", { letter: letters[question.answer] })}</strong><span class="answer-text" lang="en">${esc(question.options[question.answer])}</span></span></div>`) : incorrect ? `<p class="answer-note incorrect-note">${icon("circle-x")}${t("wrongAnswers")}</p>` : ""}
     <div class="question-tools">${run.finished ? `<button class="text-button" data-action="results">${icon("chart-line")}${t("showResults")}</button>` : `<button class="text-button" data-action="reveal" aria-pressed="${visible}">${icon(visible ? "eye-off" : "eye")}${t(unscored ? (visible ? "hideNote" : "showNote") : visible ? "hideAnswer" : "showAnswer")}</button>`}
       <button class="text-button ${run.flags[run.index] ? "flagged" : ""}" data-action="flag" aria-pressed="${Boolean(run.flags[run.index])}">${icon("flag")}${t(run.flags[run.index] ? "unflag" : "flag")}</button></div></section>
     <div class="paging"><button class="button button-outline" data-action="previous" ${run.index === 0 ? "disabled" : ""}>${icon("arrow-left")}${t("previous")}</button><span class="keyboard-hint">${t("keyboard")}</span><button class="button button-primary" data-action="${nextAction}">${t(last ? (run.finished ? "showResults" : "finish") : "next")}${icon(last ? "check" : "arrow-right")}</button></div>`;

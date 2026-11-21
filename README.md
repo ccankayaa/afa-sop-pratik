@@ -36,7 +36,7 @@ Ardından `http://localhost:4173` adresini açın. Vercel'de depoyu içe aktarı
 - Çözülen, doğru ve yanlış sayaçları tüm bitirilen denemeler ile devam eden denemelerdeki puanlı cevapların toplamıdır. Bitirilen deneme tekrar sayılmaz.
 - Tam biten test: tüm puanlı soruları cevaplanmış, bitirilmiş deneme. Eksik bitirilen denemeler bu sayaca eklenmez.
 - Test başı ortalama: tam biten testlerin eşit ağırlıklı başarı yüzdesi ve doğru sayısı ortalaması.
-- Kaynakta belirsiz veya çelişkili dört soru görünür kaynak notuyla puan dışında tutulur. Bu sorular için doğru cevap uydurulmaz.
+- AFA-022, AFA-037, AFA-080 ve AFA-112 güncel cevap anahtarıyla puana dahildir. Bu dört soru için önceki puan dışı seçimler yeni puanlamaya taşınmaz.
 
 ## Kaynak ve bağımsızlık
 
@@ -48,6 +48,6 @@ AFA logosu, kullanıcının talebiyle [AFA'nın web sitesinden](https://afa.aero
 
 ## Doğrulama
 
-Tarayıcıda tam ve eksik test bitirme, doğru/yanlış cevaplar, cevap gösterme, dört puan dışı soru, ortalama hesapları, yenilemede veri koruma, TR/EN, temalar, soru haritası ve açılır/kapanır menü kontrol edildi. 144 sorunun tamamında 320–1920 px aralığındaki 11 telefon/tablet/masaüstü boyutunda yatay taşma kontrolü yapıldı; iPad dikey ve yatay düzenleri görsel olarak incelendi.
+Tarayıcıda tam ve eksik test bitirme, doğru/yanlış cevaplar, cevap gösterme, ortalama hesapları, yenilemede veri koruma, TR/EN, temalar, soru haritası ve açılır/kapanır menü kontrol edildi. 144 sorunun tamamında 320–1920 px aralığındaki 11 telefon/tablet/masaüstü boyutunda yatay taşma kontrolü yapıldı; iPad dikey ve yatay düzenleri görsel olarak incelendi.
 
 Geliştirici: [ccankaya](https://github.com/ccankayaa)

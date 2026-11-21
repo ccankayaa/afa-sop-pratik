@@ -235,8 +235,7 @@ window.QUESTION_BANK = [
           "Throttle Full",
           "Mixture Full Rich"
         ],
-        "answer": null,
-        "note": "Kaynakta iki şık da kırmızıyla işaretli. A ve B birlikte verilmiş, tek şık doğrulanamadı."
+        "answer": 0
       },
       {
         "questionId": "AFA-023",
@@ -382,15 +381,14 @@ window.QUESTION_BANK = [
       },
       {
         "questionId": "AFA-037",
-        "prompt": "How long you can keep engaging the starter during engine start?",
+        "prompt": "During a normal engine start, how long may the ignition switch be held in START if the engine has not started?",
         "options": [
           "10 sec",
           "20 sec",
           "25 sec",
           "1 min"
         ],
-        "answer": null,
-        "note": "Kaynak bu soruda 20 sec seçeneğini işaretliyor ancak aynı belgedeki diğer starter soruları 30 saniye veriyor. Doğru süreyi güncel kontrollü kaynaktan doğrulayın."
+        "answer": 0
       },
       {
         "questionId": "AFA-038",
@@ -854,15 +852,14 @@ window.QUESTION_BANK = [
       },
       {
         "questionId": "AFA-080",
-        "prompt": "RADIO FAILURE PROCEDURES",
+        "prompt": "Complete the two blanks from the radio failure training checklist: Squawk ........ and turn on all ........ .",
         "options": [
-          "SQUAWK 7600",
-          "USE YOUR CELLPHONE",
-          "TURN ON ALL LIGHTS",
-          "1,000' ABOVE THE PUBLISHED TRAFFIC PATTERN ALTITUDE"
+          "7500 / lights",
+          "7600 / radios",
+          "7600 / lights",
+          "7700 / lights"
         ],
-        "answer": null,
-        "note": "Kaynak ilk üç satırı kırmızıyla işaretliyor ve dördüncü satırı ayrı biçimde veriyor. Tek şıklı bir cevap anahtarı doğrulanamadı."
+        "answer": 2
       },
       {
         "questionId": "AFA-081",
@@ -1204,8 +1201,7 @@ window.QUESTION_BANK = [
           "True",
           "False"
         ],
-        "answer": null,
-        "note": "Bu satırda True işaretli ancak Normal Prosedürler testindeki 17. soru fren kullanımının kalkış mesafesini artırdığını belirtir. Kaynak kendi içinde çelişiyor."
+        "answer": 1
       },
       {
         "questionId": "AFA-113",
