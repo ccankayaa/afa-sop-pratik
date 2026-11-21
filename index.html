@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Diamond DA20-C1 SOP sınavı için kişisel soru bankası ve çalışma paneli.">
+  <meta name="theme-color" content="#f3f6fa">
+  <title>AFA SOP Pratik</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:,">
+  <script src="questions.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <noscript>Testleri çözebilmek için tarayıcınızda JavaScript’i etkinleştirin.</noscript>
+
+  <aside class="sidebar" id="sidebar" aria-label="Test menüsü" tabindex="-1">
+    <div class="brand">
+      <div class="brand-mark"><span class="icon" aria-hidden="true">flight</span></div>
+      <div><div class="brand-name">AFA SOP Pratik</div><div class="brand-subtitle">Diamond DA20-C1</div></div>
+    </div>
+    <button class="icon-button drawer-close" id="close-menu" type="button" aria-label="Test menüsünü kapat"><span class="icon" aria-hidden="true">close</span></button>
+    <div class="sidebar-section"><h2>Test menüsü</h2><span id="test-count"></span></div>
+    <nav id="test-menu" aria-label="Testler"></nav>
+    <div class="aircraft">
+      <div class="runway" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="aircraft-content">
+        <span class="aircraft-label">SORU BANKASI</span>
+        <strong id="bank-count"></strong>
+        <span>AFA SOP çalışma seti</span>
+      </div>
+    </div>
+  </aside>
+  <button class="scrim" id="scrim" type="button" tabindex="-1" aria-label="Test menüsünü kapat" hidden></button>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-start">
+          <button class="icon-button menu-toggle" id="open-menu" type="button" aria-label="Test menüsünü aç" aria-controls="sidebar" aria-expanded="false"><span class="icon" aria-hidden="true">menu</span></button>
+          <span class="section-mark"><span class="icon" aria-hidden="true">grid_view</span></span>
+          <span>SOP Sınav Hazırlığı</span>
+        </div>
+        <button class="theme-button" id="theme-toggle" type="button"></button>
+      </div>
+    </header>
+
+    <main>
+      <section aria-labelledby="dashboard-title">
+        <div class="overview-heading">
+          <div>
+            <h1 id="dashboard-title">Çalışma Paneli</h1>
+            <p>Diamond DA20-C1 · Kişisel çalışma</p>
+          </div>
+          <div class="aircraft-badge"><span class="icon" aria-hidden="true">flight</span><span>DIAMOND <b>DA20-C1</b></span></div>
+        </div>
+        <div class="metrics" id="metrics" aria-label="Çalışma istatistikleri"></div>
+      </section>
+
+      <div class="practice">
+        <section class="panel quiz" id="quiz" aria-label="Soru çözümü"></section>
+        <aside class="panel navigator" id="navigator" aria-label="Soru haritası"></aside>
+      </div>
+      <footer class="footnote">
+        <span class="icon" aria-hidden="true">checklist</span>
+        <span>Kişisel çalışma seti · Kaynak: paylaşılan AFA SOP soru dokümanı. Uçuşta güncel kontrollü SOP/AFM esas alınır.</span>
+      </footer>
+    </main>
+  </div>
+
+  <dialog id="confirmation">
+    <form method="dialog" class="dialog-content">
+      <h2>Testi bitir?</h2>
+      <p id="confirmation-text"></p>
+      <div class="dialog-actions">
+        <button class="button button-outline" value="cancel" autofocus>Devam Et</button>
+        <button class="button button-primary" value="finish">Testi Bitir</button>
+      </div>
+    </form>
+  </dialog>
+  <template id="metric">
+    <div class="metric panel">
+      <span class="metric-icon"><span class="icon" aria-hidden="true"></span></span>
+      <span class="metric-label"></span>
+      <strong class="metric-value"></strong>
+      <span class="metric-detail"></span>
+    </div>
+  </template>
+</body>
+</html>
