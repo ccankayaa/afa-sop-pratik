@@ -692,7 +692,7 @@ function renderChrome() {
   document.documentElement.lang = state.language;
   document.documentElement.dataset.theme = state.theme;
   document.querySelector('meta[name="theme-color"]').content =
-    state.theme === "dark" ? "#0b111b" : "#f3f6f9";
+    state.theme === "dark" ? "#0b111b" : "#ebe5d9";
   $("theme-toggle").innerHTML = icon(state.theme === "dark" ? "sun" : "moon");
   $("theme-toggle").setAttribute(
     "aria-label",
