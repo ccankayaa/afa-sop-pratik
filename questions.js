@@ -413,10 +413,10 @@ window.QUESTION_BANK = [
       {
         "prompt": "Write down the memory items of EVACUATION (EMER. GROUND EGRESS) Procedures.",
         "options": [
-          "2 Headset and Safety Belts Remove\n1 Parking Brakes SET\n3 Canopy Unlock Open\n4 Evacuate Airplane Immedıately",
-          "1 Parking Brakes SET\n3 Canopy Unlock Open\n2 Headset and Safety Belts Remove\n4 Evacuate Airplane Immedıately",
-          "3 Canopy Unlock Open\n1 Parking Brakes SET\n2 Headset and Safety Belts Remove\n4 Evacuate Airplane Immedıately",
-          "1 Parking Brakes SET\n2 Headset and Safety Belts Remove\n3 Canopy Unlock Open\n4 Evacuate Airplane Immedıately"
+          "2 Headset and Safety Belts Remove\n1 Parking Brakes SET\n3 Canopy Unlock Open\n4 Evacuate Airplane Immediately",
+          "1 Parking Brakes SET\n3 Canopy Unlock Open\n2 Headset and Safety Belts Remove\n4 Evacuate Airplane Immediately",
+          "3 Canopy Unlock Open\n1 Parking Brakes SET\n2 Headset and Safety Belts Remove\n4 Evacuate Airplane Immediately",
+          "1 Parking Brakes SET\n2 Headset and Safety Belts Remove\n3 Canopy Unlock Open\n4 Evacuate Airplane Immediately"
         ],
         "answer": 3
       },

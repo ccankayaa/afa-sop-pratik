@@ -1,0 +1,5 @@
+.vercel/
+node_modules/
+output/
+.playwright-mcp/
+*.log
