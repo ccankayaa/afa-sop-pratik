@@ -952,7 +952,10 @@ function formatTime(seconds) {
 }
 
 function timerLabel(run) {
-  return `<div class="test-timer"><span id="timer-label">${t("elapsedTime")}</span><strong role="timer" aria-labelledby="timer-label" id="elapsed-timer">${formatTime(elapsedSeconds(run))}</strong></div>`;
+  return `<div class="test-timer">
+    <span class="timer-icon">${icon("clock")}</span>
+    <div class="timer-reading"><span id="timer-label">${t("elapsedTime")}</span><strong role="timer" aria-labelledby="timer-label" id="elapsed-timer">${formatTime(elapsedSeconds(run))}</strong></div>
+  </div>`;
 }
 
 function renderPractice() {
@@ -1298,7 +1301,7 @@ $("main").addEventListener("change", (event) => {
     if (questionIndex + 1 < test.questions.length)
       goToQuestion(questionIndex + 1);
     else if (summarize(test, run).blank === 0) finishTest();
-  }, 550);
+  }, 100);
 });
 $("search-open").addEventListener("click", openSearch);
 $("search-close").addEventListener("click", () => $("search-dialog").close());

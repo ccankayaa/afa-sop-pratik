@@ -683,8 +683,10 @@ main {
 }
 .toolbar-right {
   display: flex;
-  align-items: center;
-  gap: 15px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  flex-shrink: 0;
 }
 .question-position {
   color: var(--muted);
@@ -1528,9 +1530,6 @@ dialog::backdrop {
   .practice-subtitle {
     font-size: 10px;
   }
-  .toolbar-right {
-    flex-shrink: 0;
-  }
   .question-position {
     display: none;
   }
@@ -1750,23 +1749,43 @@ dialog::backdrop {
   color: var(--bad);
 }
 .test-timer {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  min-width: 138px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
   color: var(--muted);
-  text-align: right;
   white-space: nowrap;
+}
+.timer-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.timer-icon .icon {
+  width: 19px;
+  height: 19px;
+}
+.timer-reading {
+  display: grid;
+  gap: 3px;
   font-size: 10px;
+  line-height: 1.15;
 }
 .test-timer strong {
-  color: inherit;
+  color: var(--text);
   font:
-    650 15px ui-monospace,
+    650 19px/1 ui-monospace,
     monospace;
-}
-.toolbar-right {
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
 .result-timing {
   margin-top: 24px;
@@ -1928,13 +1947,23 @@ dialog::backdrop {
     min-height: 38px;
     font-size: 11px;
   }
-  .toolbar-right {
-    gap: 8px;
-  }
   .test-timer {
+    min-width: 0;
+    gap: 7px;
+    padding: 7px 8px;
+  }
+  .timer-icon {
+    width: 26px;
+    height: 26px;
+  }
+  .timer-icon .icon {
+    width: 16px;
+    height: 16px;
+  }
+  .timer-reading {
     font-size: 9px;
   }
   .test-timer strong {
-    font-size: 13px;
+    font-size: 17px;
   }
 }
