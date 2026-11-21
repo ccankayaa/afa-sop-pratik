@@ -55,7 +55,10 @@ const strings = {
     startCombinedHint: "Birleştirmek için en az iki test seç.",
     selectForMix: "Teste ekle: {name}",
     wrongTest: "Yanlışları tekrar çöz",
-    wrongEmpty: "Tüm testleri bitirdin. Tekrar çözülecek yanlış cevap yok.",
+    wrongEmpty: "Şu anda tekrar çözülecek yanlış soru yok.",
+    worstTest: "En zor sorular",
+    mostIncorrect: "En çok yanlış yapılan sorular",
+    mistakesDetail: "{wrong}/{total} yanlış · %{rate}",
     elapsedTime: "Geçen süre",
     totalTime: "Toplam çözme süresi",
     questionTimes: "Soru başına süre",
@@ -186,9 +189,11 @@ const strings = {
     startCombined: "Start selected tests ({n})",
     startCombinedHint: "Select at least two tests to combine.",
     selectForMix: "Include in combined test: {name}",
-    wrongTest: "Retry incorrect answers",
-    wrongEmpty:
-      "You finished all tests. There are no incorrect answers to retry.",
+    wrongTest: "Retest Incorrect",
+    wrongEmpty: "No incorrect answers to retest yet.",
+    worstTest: "Worst Questions",
+    mostIncorrect: "Most missed questions",
+    mistakesDetail: "{wrong}/{total} wrong · {rate}%",
     elapsedTime: "Elapsed time",
     totalTime: "Total time spent",
     questionTimes: "Time per question",
@@ -338,9 +343,11 @@ const title = (test) =>
       ? "allQuestions"
       : test.id === "wrong"
         ? "wrongTest"
-        : test.id === "unseen"
-          ? "unseen"
-          : "mixedTest",
+        : test.id === "worst"
+          ? "worstTest"
+          : test.id === "unseen"
+            ? "unseen"
+            : "mixedTest",
   );
 
 function getTest(id, data = state) {
@@ -357,9 +364,11 @@ function getTest(id, data = state) {
       unseenQuestions(data);
     return questions.length ? { id, questions } : undefined;
   }
-  if (id === "wrong") {
-    const keys = data.runs.wrong?.keys ?? data.missed;
-    return keys.length && tests.every((test) => data.covered.includes(test.id))
+  if (id === "wrong" || id === "worst") {
+    const keys =
+      data.runs[id]?.keys ??
+      reviewPool(id, data).map((question) => question.key);
+    return keys.length
       ? { id, questions: keys.map((key) => questionsByKey.get(key)) }
       : undefined;
   }
@@ -391,7 +400,7 @@ const newRun = (test) => ({
   results: false,
   startedAt: Date.now(),
   questionMs: {},
-  ...(["wrong", "unseen"].includes(test.id)
+  ...(["wrong", "worst", "unseen"].includes(test.id)
     ? { keys: test.questions.map((question) => question.key) }
     : {}),
 });
@@ -462,6 +471,8 @@ function restore() {
     missed: [],
     seen: [],
     attempts: {},
+    errorCounts: {},
+    incorrect: [],
   };
   if (!saved || typeof saved !== "object") return restored;
   restored.collapsed = saved.collapsed === true;
@@ -484,6 +495,17 @@ function restore() {
         ),
     );
   restored.missed = validKeys(saved.missed);
+  const legacyErrors = !saved.errorCounts || !Array.isArray(saved.incorrect);
+  const latest = new Map();
+  if (!legacyErrors) {
+    restored.incorrect = Array.from(
+      new Set(saved.incorrect.filter(isScoredId)),
+    );
+    for (const [id, count] of Object.entries(saved.errorCounts)) {
+      if (isScoredId(id) && Number.isSafeInteger(count) && count > 0)
+        restored.errorCounts[id] = count;
+    }
+  }
   const seen = new Set(
     Array.isArray(saved.seen)
       ? saved.seen.filter((id) => questionsById.has(id))
@@ -505,7 +527,7 @@ function restore() {
   }
   for (const [id, old] of Object.entries(saved.runs ?? {})) {
     if (!old || typeof old !== "object") continue;
-    const generated = id === "wrong" || id === "unseen";
+    const generated = ["wrong", "worst", "unseen"].includes(id);
     const keys = validKeys(old.keys, id === "unseen");
     if (generated && !keys.length) continue;
     if (generated) restored.runs[id] = { keys };
@@ -560,6 +582,19 @@ function restore() {
       if (!hasAttemptTotals && run.choices[index] !== undefined)
         restored.attempts[questionId] =
           (restored.attempts[questionId] ?? 0) + 1;
+      if (
+        legacyErrors &&
+        question.answer !== null &&
+        run.choices[index] !== undefined
+      ) {
+        const wrong = run.choices[index] !== question.answer;
+        if (wrong)
+          restored.errorCounts[questionId] =
+            (restored.errorCounts[questionId] ?? 0) + 1;
+        const date = run.startedAt ?? 0;
+        if (!latest.has(questionId) || date >= latest.get(questionId).date)
+          latest.set(questionId, { date, wrong });
+      }
     });
     restored.runs[test.id] = run;
   }
@@ -571,6 +606,21 @@ function restore() {
       )
         restored.attempts[question.questionId] ??= 1;
     }
+  }
+  if (legacyErrors) {
+    const incorrect = new Set(
+      restored.missed.map((key) => questionsByKey.get(key).questionId),
+    );
+    for (const id of incorrect) restored.errorCounts[id] ??= 1;
+    for (const [id, { wrong }] of latest) {
+      if (wrong) incorrect.add(id);
+      else incorrect.delete(id);
+    }
+    restored.incorrect = [...incorrect];
+  }
+  for (const [id, count] of Object.entries(restored.errorCounts)) {
+    restored.attempts[id] = Math.max(count, restored.attempts[id] ?? 0);
+    seen.add(id);
   }
   restored.seen = [...seen];
   for (const [id, run] of Object.entries(restored.runs)) {
@@ -599,6 +649,47 @@ function validKeys(items, includeUnscored = false) {
 function unseenQuestions(data = state) {
   const seen = new Set(data.seen);
   return allQuestions.filter((question) => !seen.has(question.questionId));
+}
+
+function isScoredId(id) {
+  const question = questionsById.get(id);
+  return Boolean(question && question.answer !== null);
+}
+
+function mistakeRanking(data = state) {
+  return Object.entries(data.errorCounts)
+    .map(([id, wrong]) => ({
+      question: questionsById.get(id),
+      wrong,
+      total: data.attempts[id],
+    }))
+    .sort(
+      (a, b) =>
+        b.wrong - a.wrong ||
+        b.wrong / b.total - a.wrong / a.total ||
+        a.question.questionId.localeCompare(b.question.questionId),
+    );
+}
+
+function reviewPool(id, data = state) {
+  if (id === "wrong")
+    return data.incorrect.map((questionId) => questionsById.get(questionId));
+  return mistakeRanking(data)
+    .filter(({ wrong, total }) => total >= 3 && wrong * 10 >= total * 3)
+    .map(({ question }) => question);
+}
+
+function recordQuestionAnswer(question, choice) {
+  const id = question.questionId;
+  state.attempts[id] = (state.attempts[id] ?? 0) + 1;
+  if (question.answer === null) return;
+  const index = state.incorrect.indexOf(id);
+  if (choice !== question.answer) {
+    state.errorCounts[id] = (state.errorCounts[id] ?? 0) + 1;
+    if (index === -1) state.incorrect.push(id);
+  } else if (index !== -1) {
+    state.incorrect.splice(index, 1);
+  }
 }
 
 function testAttempts(id) {
@@ -653,7 +744,7 @@ function save() {
 }
 
 function recordCoverage(data, test, run) {
-  if (test.id === "wrong") return;
+  if (test.id === "wrong" || test.id === "worst") return;
   const included = new Map(
     test.questions.map((question, index) => [question.key, run.choices[index]]),
   );
@@ -739,7 +830,8 @@ function metricData() {
 }
 
 function renderMenu() {
-  const wrong = getTest("wrong");
+  const wrong = availableReview("wrong");
+  const worst = availableReview("worst");
   const unseen = getTest("unseen");
   $("sidebar-nav").innerHTML =
     `<button class="nav-home" data-action="home" ${view === "home" ? 'aria-current="page"' : ""} title="${t("home")}">${icon("layout-dashboard")}<span class="home-label">${t("home")}</span></button>
@@ -759,6 +851,7 @@ function renderMenu() {
       <button class="nav-home" data-action="toggle-combine" aria-expanded="${combining}" aria-label="${t("combine")}" title="${t("combine")}">${icon("arrows-maximize")}<span class="home-label">${t("combine")}</span></button>
       ${combining ? `<button class="button button-primary combine-start" data-action="start-combined" aria-label="${t("startCombined", { n: selectedTests.size })}" title="${t("startCombinedHint")}" ${selectedTests.size < 2 ? "disabled" : ""}>${icon("arrow-right")}<span class="home-label">${t("startCombined", { n: selectedTests.size })}</span></button>` : ""}
       ${wrong ? menuShortcut(wrong, "rotate-clockwise") : ""}
+      ${worst ? menuShortcut(worst, "chart-line") : ""}
     </div>`;
 }
 
@@ -815,9 +908,18 @@ function chooseStorage(choice) {
       missed: [...new Set([...saved.missed, ...session.missed])],
       seen: [...new Set([...saved.seen, ...session.seen])],
       attempts: { ...saved.attempts },
+      errorCounts: { ...saved.errorCounts },
+      incorrect: [
+        ...new Set([
+          ...saved.incorrect.filter((id) => !session.attempts[id]),
+          ...session.incorrect,
+        ]),
+      ],
     };
     for (const [id, count] of Object.entries(session.attempts))
       state.attempts[id] = (state.attempts[id] ?? 0) + count;
+    for (const [id, count] of Object.entries(session.errorCounts))
+      state.errorCounts[id] = (state.errorCounts[id] ?? 0) + count;
     save();
   } else if (choice !== "accepted") {
     try {
@@ -918,7 +1020,8 @@ function footnote() {
 
 function renderHome() {
   const data = metricData();
-  const wrong = getTest("wrong");
+  const wrong = availableReview("wrong");
+  const worst = availableReview("worst");
   const unseen = getTest("unseen");
   const remaining = unseenQuestions().length;
   const solved = Object.keys(state.attempts).length;
@@ -972,6 +1075,7 @@ function renderHome() {
       getTest("all"),
       ...(unseen ? [unseen] : []),
       ...(wrong ? [wrong] : []),
+      ...(worst ? [worst] : []),
       ...Object.keys(state.runs)
         .filter((id) => id.startsWith("mix-"))
         .map((id) => getTest(id))
@@ -980,16 +1084,18 @@ function renderHome() {
       .map((test, index) => {
         const run = state.runs[test.id];
         const answered = progress(test, run);
+        const runTotal = run?.keys?.length ?? test.questions.length;
         const attempts = testAttempts(test.id);
         const status = run?.finished
           ? t("completed")
           : answered
             ? t("inProgress", { n: answered, total: test.questions.length })
             : t("notStarted");
-        return `<button class="test-card" data-test="${test.id}"><span class="test-card-number">${index < tests.length ? String(index + 1).padStart(2, "0") : icon(test.id === "all" ? "book-2" : test.id === "unseen" ? "eye-off" : "rotate-clockwise")}</span><div class="test-card-copy"><h3>${esc(title(test))}</h3><p>${t("questionCount", { n: test.questions.length })} <span>· ${status}</span></p><p class="test-attempts">${t("testAttempts", { n: attempts, repeats: Math.max(0, attempts - 1) })}</p><div class="mini-progress"><span style="width:${(answered / test.questions.length) * 100}%"></span></div></div>${icon("arrow-right")}</button>`;
+        return `<button class="test-card" data-test="${test.id}"><span class="test-card-number">${index < tests.length ? String(index + 1).padStart(2, "0") : icon(test.id === "all" ? "book-2" : test.id === "unseen" ? "eye-off" : test.id === "worst" ? "chart-line" : "rotate-clockwise")}</span><div class="test-card-copy"><h3>${esc(title(test))}</h3><p>${t("questionCount", { n: test.questions.length })} <span>· ${status}</span></p><p class="test-attempts">${t("testAttempts", { n: attempts, repeats: Math.max(0, attempts - 1) })}</p><div class="mini-progress"><span style="width:${(answered / runTotal) * 100}%"></span></div></div>${icon("arrow-right")}</button>`;
       })
       .join("")}</div>
-    ${!wrong && tests.every((test) => state.covered.includes(test.id)) ? `<p class="practice-subtitle">${t("wrongEmpty")}</p>` : ""}</section>
+    </section>
+    ${renderMistakeRanking()}
     <section class="recent-section" aria-labelledby="recent-title"><div class="section-heading"><h2 id="recent-title">${t("recent")}</h2><span>${t("recentHint")}</span></div>
       ${
         state.history.length
@@ -1014,6 +1120,28 @@ function renderHome() {
               .join("")}</div>`
           : `<p class="empty-history">${icon("chart-line")}${t("emptyHistory")}</p>`
       }</section>${footnote()}`;
+}
+
+function availableReview(id) {
+  const questions = reviewPool(id);
+  return questions.length ? { id, questions } : undefined;
+}
+
+function renderMistakeRanking() {
+  const ranked = mistakeRanking().slice(0, 10);
+  return `<section class="recent-section" aria-labelledby="mistake-title">
+    <div class="section-heading"><h2 id="mistake-title">${t("mostIncorrect")}</h2></div>
+    ${
+      ranked.length
+        ? `<ol class="mistake-list">${ranked
+            .map(
+              ({ question, wrong, total }) =>
+                `<li><button class="mistake-row" type="button" data-search-key="${esc(question.key)}"><span class="question-id">${esc(question.questionId)}</span><span class="mistake-prompt" lang="en">${esc(question.prompt)}</span><span class="mistake-rate">${t("mistakesDetail", { wrong, total, rate: num((wrong / total) * 100) })}</span></button></li>`,
+            )
+            .join("")}</ol>`
+        : `<p class="empty-history">${t("wrongEmpty")}</p>`
+    }
+  </section>`;
 }
 
 function questionStatus(question, run, index) {
@@ -1103,7 +1231,7 @@ function renderResults(test, run, result) {
         "",
       )}</div>${result.review ? `<p>${t("excluded", { n: result.review })}</p>` : ""}
     ${renderQuestionTimes(test, run)}
-    <div class="result-actions"><button class="button button-outline" data-action="review">${icon("eye")}${t("review")}</button><button class="button button-primary" data-action="restart">${icon("rotate-clockwise")}${t("restart")}</button>${test.id !== "wrong" && getTest("wrong") ? `<button class="button button-outline" data-test="wrong">${t("wrongTest")}</button>` : ""}</div><button class="text-button" data-action="home">${icon("arrow-left")}${t("backHome")}</button></section>`;
+    <div class="result-actions"><button class="button button-outline" data-action="review">${icon("eye")}${t("review")}</button><button class="button button-primary" data-action="restart">${icon("rotate-clockwise")}${t("restart")}</button>${test.id !== "wrong" && availableReview("wrong") ? `<button class="button button-outline" data-test="wrong">${t("wrongTest")}</button>` : ""}</div><button class="text-button" data-action="home">${icon("arrow-left")}${t("backHome")}</button></section>`;
 }
 
 function renderQuestionTimes(test, run) {
@@ -1194,6 +1322,14 @@ function readRoute(questionIndex) {
 }
 
 function navigate(id) {
+  if (id === "wrong" || id === "worst") {
+    const keys = reviewPool(id).map((question) => question.key);
+    if (keys.length) {
+      const run = state.runs[id];
+      if (run?.finished) delete state.runs[id];
+      else if (run) run.keys = [...new Set([...run.keys, ...keys])];
+    }
+  }
   const hash = id ? `#test/${id}` : "#home";
   if (location.hash === hash) readRoute();
   else {
@@ -1367,7 +1503,7 @@ function openSearchQuestion(key) {
   const question = questionsByKey.get(key);
   if (!question) return;
   const index = Number(question.key.split("/")[1]);
-  $("search-dialog").close();
+  if ($("search-dialog").open) $("search-dialog").close();
   const hash = `#test/${question.source}`;
   if (location.hash !== hash) {
     // Use the normal test route without rendering the old question first.
@@ -1419,7 +1555,10 @@ function performAction(action) {
       if (!unseenQuestions().length) return navigate();
       delete state.runs.unseen;
     }
-    if (state.active === "wrong") delete state.runs.wrong;
+    if (state.active === "wrong" || state.active === "worst") {
+      if (!reviewPool(state.active).length) return navigate();
+      delete state.runs[state.active];
+    }
     state.runs[state.active] = newRun(currentTest());
     return goToQuestion(0);
   }
@@ -1482,8 +1621,7 @@ $("main").addEventListener("change", (event) => {
   const choice = Number(event.target.value);
   run.choices[questionIndex] = choice;
   const answer = test.questions[questionIndex].answer;
-  const questionId = test.questions[questionIndex].questionId;
-  state.attempts[questionId] = (state.attempts[questionId] ?? 0) + 1;
+  recordQuestionAnswer(test.questions[questionIndex], choice);
   checkpointQuestion();
   save();
   render();

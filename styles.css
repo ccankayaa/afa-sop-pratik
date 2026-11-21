@@ -50,6 +50,39 @@
   gap: 10px;
   margin: 0 0 20px;
 }
+.mistake-list {
+  margin: 0;
+  padding-left: 25px;
+}
+.mistake-list li::marker {
+  color: var(--muted);
+  font-size: 12px;
+}
+.mistake-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 11px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+}
+.mistake-row:hover {
+  background: var(--hover);
+}
+.mistake-prompt {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.mistake-rate {
+  color: var(--bad);
+  font-size: 12px;
+  white-space: nowrap;
+}
 .question-attempts {
   color: var(--muted);
   font-size: 12px;

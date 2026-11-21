@@ -10,7 +10,9 @@ Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmız
 
 Her sorunun sol üstünde benzersiz bir ID görünür. Üst menüdeki **Soru ara** ile ID’yi (ör. `AFA-032`) veya soru ve şıklardaki kelimeleri arayabilirsin. Sonucu şıklarıyla açabilir ve doğrudan ilgili soruya gidebilirsin.
 
-Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar. Altı kaynak testin tüm puanlı soruları cevaplanıp testler bitirildikten sonra, hatalı cevaplanan sorular **Yanlışları tekrar çöz** testinde toplanır. Bu koşul birleşik ve tüm soruları içeren testlerle de karşılanabilir.
+Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar.
+
+**Retest Incorrect**, son cevabı yanlış olan soruları gösterir. Doğru cevaplanan soru listeden çıkar. **Worst Questions**, en az üç kez cevaplanmış ve hata oranı %30 veya üzeri olan soruları içerir. Bu testlere tekrar girildiğinde yeni uygun sorular eklenir ve devam eden denemenin sırası korunur. Ana sayfada toplam yanlış sayısına göre ilk 10 soru ve her birinin hata oranı gösterilir. Önceki sürümlerden yalnızca eldeki yanlış kayıtları aktarılabilir.
 
 **Görülmemiş sorular** testini açtığında, o an daha önce soru ekranında açmadığın sorulardan yeni bir liste oluşturulur. Çözüm yüzdesi, en az bir kez cevaplanan benzersiz soruların tüm bankaya oranıdır. Test kartları deneme ve tekrar sayısını, soru kartları cevaplama sayısını gösterir. Ortalama puan, gönderilen puanlı testlerin 100 üzerinden puanlarının ortalamasıdır. Eski sürümde soru bazında kayıt tutulmadığı için önceki sayılar eldeki denemelerden çıkarılır.
 
