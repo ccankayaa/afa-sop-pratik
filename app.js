@@ -2,6 +2,17 @@
 
 const tests = window.QUESTION_BANK;
 const storageKey = "afa-sop-pratik:v1";
+const consentCookie = "afa_sop_storage";
+const allQuestions = tests.flatMap((test) =>
+  test.questions.map((question, index) => ({
+    ...question,
+    key: `${test.id}/${index}`,
+    source: test.id,
+  })),
+);
+const questionsByKey = new Map(
+  allQuestions.map((question) => [question.key, question]),
+);
 const $ = (id) => document.getElementById(id);
 const esc = (value) =>
   String(value).replace(
@@ -17,6 +28,25 @@ const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const mobile = matchMedia("(max-width: 959px)");
 const strings = {
   tr: {
+    allQuestions: "Tüm soruları çöz",
+    combine: "Testleri birleştir",
+    mixedTest: "Birleşik test",
+    startCombined: "Seçili testleri çöz ({n})",
+    startCombinedHint: "Birleştirmek için en az iki test seç.",
+    selectForMix: "Teste ekle: {name}",
+    wrongTest: "Yanlışları tekrar çöz",
+    wrongEmpty: "Tüm testleri bitirdin. Tekrar çözülecek yanlış cevap yok.",
+    timeLeft: "Kalan süre",
+    timeUp: "Süre doldu. Test otomatik olarak bitirildi.",
+    storageTitle: "Çerez ve tarayıcı depolama tercihleri",
+    storageIntro:
+      "Kabul edersen ilerleme ve istatistikler bu tarayıcıda saklanır. Yalnızca gerekli çerezleri seçersen sadece çerez tercihin hatırlanır.",
+    acceptStorage: "Kabul et",
+    necessaryStorage: "Yalnızca gereklileri kabul et",
+    rejectStorage: "Reddet",
+    storageSettings: "Çerez tercihleri",
+    privacy: "Kullanıcıların herhangi bir bilgisi sunucularda tutulmamaktadır.",
+    sessionOnly: "İlerleme yalnızca açık sayfada tutulur",
     home: "Ana sayfa",
     dashboard: "Çalışma paneli",
     intro: "Diamond DA20-C1 · SOP sınavına kendi hızında hazırlan.",
@@ -109,6 +139,26 @@ const strings = {
       "Kaynakta True işaretli; aynı belgedeki diğer soru fren kullanımının kalkış mesafesini artırdığını belirtiyor. Bu çelişki nedeniyle soru puan dışıdır.",
   },
   en: {
+    allQuestions: "Practice all questions",
+    combine: "Combine tests",
+    mixedTest: "Combined test",
+    startCombined: "Start selected tests ({n})",
+    startCombinedHint: "Select at least two tests to combine.",
+    selectForMix: "Include in combined test: {name}",
+    wrongTest: "Retry incorrect answers",
+    wrongEmpty:
+      "You finished all tests. There are no incorrect answers to retry.",
+    timeLeft: "Time remaining",
+    timeUp: "Time is up. Your test was submitted automatically.",
+    storageTitle: "Cookie and browser storage preferences",
+    storageIntro:
+      "Accept to save progress and statistics in this browser. Essential cookies only remembers your cookie preference.",
+    acceptStorage: "Accept",
+    necessaryStorage: "Accept essentials only",
+    rejectStorage: "Reject",
+    storageSettings: "Cookie preferences",
+    privacy: "No user information is stored on servers.",
+    sessionOnly: "Progress is kept only while this page is open",
     home: "Home",
     dashboard: "Study dashboard",
     intro: "Diamond DA20-C1 · Prepare for your SOP exam at your own pace.",
@@ -210,10 +260,15 @@ const testTitles = {
   extra: ["Ek Sorular", "Additional Questions"],
 };
 let storageAvailable = true;
-const state = restore();
+let consent = readConsent();
+let consentOpen = !consent;
+let state = restore();
 let drawerOpen = false;
 let mapOpen = false;
 let view = "home";
+let combining = false;
+const selectedTests = new Set();
+let advanceTimer;
 const t = (key, values = {}) =>
   strings[state.language][key].replace(/\{(\w+)\}/g, (_, k) =>
     esc(values[k] ?? ""),
@@ -222,24 +277,78 @@ const num = (value) =>
   new Intl.NumberFormat(state.language === "tr" ? "tr-TR" : "en-GB", {
     maximumFractionDigits: 1,
   }).format(value);
-const title = (test) => testTitles[test.id][state.language === "tr" ? 0 : 1];
-const currentTest = () => tests.find((test) => test.id === state.active);
-const newRun = () => ({
+const title = (test) =>
+  testTitles[test.id]?.[state.language === "tr" ? 0 : 1] ??
+  t(
+    test.id === "all"
+      ? "allQuestions"
+      : test.id === "wrong"
+        ? "wrongTest"
+        : "mixedTest",
+  );
+
+function getTest(id, data = state) {
+  const base = tests.find((test) => test.id === id);
+  if (base)
+    return {
+      ...base,
+      questions: allQuestions.filter((question) => question.source === id),
+    };
+  if (id === "all") return { id, questions: allQuestions };
+  if (id === "wrong") {
+    const keys = data.runs.wrong?.keys ?? data.missed;
+    return keys.length && tests.every((test) => data.covered.includes(test.id))
+      ? { id, questions: keys.map((key) => questionsByKey.get(key)) }
+      : undefined;
+  }
+  if (!/^mix-[1-9]\d?$/.test(id)) return undefined;
+  const mask = Number(id.slice(4));
+  if (mask >= 2 ** tests.length) return undefined;
+  const sources = tests
+    .filter((_, index) => mask & (1 << index))
+    .map((test) => test.id);
+  if (sources.length < 2) return undefined;
+  return {
+    id,
+    questions: allQuestions.filter((question) =>
+      sources.includes(question.source),
+    ),
+  };
+}
+
+const currentTest = () => getTest(state.active);
+const duration = (test) =>
+  Math.max(5, Math.ceil((test.questions.length * 75) / 60)) * 60_000;
+const newRun = (test) => ({
   index: 0,
   choices: {},
   revealed: {},
   flags: {},
   finished: false,
   results: false,
+  deadline: Date.now() + duration(test),
+  ...(test.id === "wrong"
+    ? { keys: test.questions.map((question) => question.key) }
+    : {}),
 });
-const runFor = (id = state.active) => (state.runs[id] ??= newRun());
+const runFor = (id = state.active) => (state.runs[id] ??= newRun(getTest(id)));
+
+function readConsent() {
+  const entry = document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith(`${consentCookie}=`));
+  const value = entry?.slice(consentCookie.length + 1);
+  return ["accepted", "essential"].includes(value) ? value : null;
+}
 
 function restore() {
   let saved;
-  try {
-    saved = JSON.parse(localStorage.getItem(storageKey));
-  } catch {
-    /* Keep temporary state available. */
+  if (consent === "accepted") {
+    try {
+      saved = JSON.parse(localStorage.getItem(storageKey));
+    } catch {
+      /* Keep temporary state available. */
+    }
   }
   const restored = {
     active: tests[0].id,
@@ -248,10 +357,10 @@ function restore() {
     collapsed: false,
     runs: {},
     history: [],
+    covered: [],
+    missed: [],
   };
   if (!saved || typeof saved !== "object") return restored;
-  if (tests.some((test) => test.id === saved.active))
-    restored.active = saved.active;
   if (["dark", "light"].includes(saved.theme)) restored.theme = saved.theme;
   if (["tr", "en"].includes(saved.language)) restored.language = saved.language;
   restored.collapsed = saved.collapsed === true;
@@ -264,9 +373,25 @@ function restore() {
         ) &&
         result.total > 0,
     );
-  for (const test of tests) {
-    const old = saved.runs?.[test.id];
+  restored.covered = tests
+    .map((test) => test.id)
+    .filter(
+      (id) =>
+        saved.covered?.includes?.(id) ||
+        restored.history.some(
+          (result) => result.testId === id && result.blank === 0,
+        ),
+    );
+  restored.missed = validKeys(saved.missed);
+  for (const [id, old] of Object.entries(saved.runs ?? {})) {
     if (!old || typeof old !== "object") continue;
+    const keys = validKeys(old.keys);
+    if (id === "wrong" && keys.length) restored.runs.wrong = { keys };
+    const test = getTest(id, restored);
+    if (!test) {
+      if (id === "wrong") delete restored.runs.wrong;
+      continue;
+    }
     const run = {
       index: Math.min(
         test.questions.length - 1,
@@ -277,6 +402,11 @@ function restore() {
       flags: {},
       finished: old.finished === true,
       results: old.results === true && old.finished === true,
+      deadline: Number.isFinite(old.deadline) ? old.deadline : null,
+      timedOut: old.timedOut === true,
+      ...(id === "wrong"
+        ? { keys: test.questions.map((question) => question.key) }
+        : {}),
     };
     test.questions.forEach((question, index) => {
       const choice = old.choices?.[index];
@@ -291,14 +421,68 @@ function restore() {
     });
     restored.runs[test.id] = run;
   }
+  for (const [id, run] of Object.entries(restored.runs)) {
+    if (run.finished && id !== "wrong")
+      recordCoverage(restored, getTest(id, restored), run);
+  }
+  if (typeof saved.active === "string" && getTest(saved.active, restored))
+    restored.active = saved.active;
   return restored;
 }
 
+function validKeys(items) {
+  return Array.isArray(items)
+    ? [
+        ...new Set(
+          items.filter(
+            (key) =>
+              questionsByKey.has(key) &&
+              questionsByKey.get(key).answer !== null,
+          ),
+        ),
+      ]
+    : [];
+}
+
 function save() {
+  if (consent !== "accepted") return;
+  // Respect a storage preference changed in another tab.
+  if (readConsent() !== "accepted") {
+    storageAvailable = false;
+    return;
+  }
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {
     storageAvailable = false;
+  }
+}
+
+function recordCoverage(data, test, run) {
+  if (test.id === "wrong") return;
+  const included = new Map(
+    test.questions.map((question, index) => [question.key, run.choices[index]]),
+  );
+  const missed = new Set(data.missed);
+  for (const question of test.questions) {
+    const answer = included.get(question.key);
+    if (
+      question.answer !== null &&
+      Number.isInteger(answer) &&
+      answer !== question.answer
+    )
+      missed.add(question.key);
+  }
+  data.missed = [...missed];
+  for (const source of tests) {
+    if (data.covered.includes(source.id)) continue;
+    const scored = allQuestions.filter(
+      (question) => question.source === source.id && question.answer !== null,
+    );
+    if (
+      scored.every((question) => Number.isInteger(included.get(question.key)))
+    )
+      data.covered.push(source.id);
   }
 }
 
@@ -335,8 +519,9 @@ function metricData() {
   const add = (result) =>
     Object.keys(totals).forEach((key) => (totals[key] += result[key]));
   state.history.forEach(add);
-  tests.forEach((test) => {
-    const run = state.runs[test.id];
+  Object.entries(state.runs).forEach(([id, run]) => {
+    const test = getTest(id);
+    if (!test) return;
     if (run && !run.finished) add(summarize(test, run));
   });
   const full = state.history.filter((result) => result.blank === 0);
@@ -353,6 +538,7 @@ function metricData() {
 }
 
 function renderMenu() {
+  const wrong = getTest("wrong");
   $("sidebar-nav").innerHTML =
     `<button class="nav-home" data-action="home" ${view === "home" ? 'aria-current="page"' : ""} title="${t("home")}">${icon("layout-dashboard")}<span class="home-label">${t("home")}</span></button>
     <div class="nav-section"><span>${t("tests")}</span><span>06</span></div>
@@ -361,10 +547,76 @@ function renderMenu() {
         (
           test,
           index,
-        ) => `<button class="test-tab" data-test="${test.id}" ${view === "test" && test.id === state.active ? 'aria-current="page"' : ""} title="${esc(title(test))}" aria-label="${esc(title(test))}, ${t("questionCount", { n: test.questions.length })}">
-      <span class="tab-number">${String(index + 1).padStart(2, "0")}</span><span class="tab-copy"><span class="tab-name">${esc(title(test))}</span><span class="tab-count">${t("questionCount", { n: test.questions.length })}</span></span>${icon("chevron-right", "tab-chevron")}</button>`,
+        ) => `<div class="test-row">${combining ? `<input type="checkbox" data-mix="${test.id}" aria-label="${t("selectForMix", { name: title(test) })}" ${selectedTests.has(test.id) ? "checked" : ""}>` : ""}<button class="test-tab" data-test="${test.id}" ${view === "test" && test.id === state.active ? 'aria-current="page"' : ""} title="${esc(title(test))}" aria-label="${esc(title(test))}, ${t("questionCount", { n: test.questions.length })}">
+      <span class="tab-number">${String(index + 1).padStart(2, "0")}</span><span class="tab-copy"><span class="tab-name">${esc(title(test))}</span><span class="tab-count">${t("questionCount", { n: test.questions.length })}</span></span>${icon("chevron-right", "tab-chevron")}</button></div>`,
       )
-      .join("")}`;
+      .join("")}
+    <div class="sidebar-tools">
+      ${menuShortcut(getTest("all"), "book-2")}
+      <button class="nav-home" data-action="toggle-combine" aria-expanded="${combining}" aria-label="${t("combine")}" title="${t("combine")}">${icon("arrows-maximize")}<span class="home-label">${t("combine")}</span></button>
+      ${combining ? `<button class="button button-primary combine-start" data-action="start-combined" aria-label="${t("startCombined", { n: selectedTests.size })}" title="${t("startCombinedHint")}" ${selectedTests.size < 2 ? "disabled" : ""}>${icon("arrow-right")}<span class="home-label">${t("startCombined", { n: selectedTests.size })}</span></button>` : ""}
+      ${wrong ? menuShortcut(wrong, "rotate-clockwise") : ""}
+    </div>`;
+}
+
+function menuShortcut(test, symbol) {
+  const label = esc(title(test));
+  return `<button class="nav-home" data-test="${test.id}" ${view === "test" && test.id === state.active ? 'aria-current="page"' : ""} aria-label="${label}" title="${label}">${icon(symbol)}<span class="home-label">${label}</span></button>`;
+}
+
+function renderStorageBanner() {
+  const banner = $("storage-banner");
+  banner.hidden = !consentOpen;
+  document.body.classList.toggle("storage-banner-open", consentOpen);
+  if (!consentOpen) return;
+  banner.innerHTML = `<div><h2 id="storage-title">${t("storageTitle")}</h2><p>${t("storageIntro")}</p></div>
+    <div class="storage-actions">
+      <button class="button button-primary" data-consent="accepted">${t("acceptStorage")}</button>
+      <button class="button button-outline" data-consent="essential">${t("necessaryStorage")}</button>
+      <button class="button button-outline" data-consent="rejected">${t("rejectStorage")}</button>
+    </div>`;
+  document.body.style.setProperty(
+    "--storage-banner-height",
+    `${banner.offsetHeight}px`,
+  );
+}
+
+function chooseStorage(choice) {
+  const previous = consent;
+  consent = choice;
+  consentOpen = false;
+  storageAvailable = true;
+  const attributes = `Path=/; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+  if (choice === "rejected")
+    document.cookie = `${consentCookie}=; Max-Age=0; ${attributes}`;
+  else
+    document.cookie = `${consentCookie}=${choice}; Max-Age=31536000; ${attributes}`;
+
+  if (choice === "accepted" && previous !== "accepted") {
+    const saved = restore();
+    const session = state;
+    state = {
+      ...saved,
+      ...(Object.keys(session.runs).length ? { active: session.active } : {}),
+      language: session.language === "tr" ? saved.language : session.language,
+      theme: session.theme === "dark" ? saved.theme : session.theme,
+      collapsed: saved.collapsed || session.collapsed,
+      runs: { ...saved.runs, ...session.runs },
+      history: [...saved.history, ...session.history],
+      covered: [...new Set([...saved.covered, ...session.covered])],
+      missed: [...new Set([...saved.missed, ...session.missed])],
+    };
+    save();
+  } else if (choice !== "accepted") {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {
+      /* Storage may be blocked. */
+    }
+  }
+  readRoute();
+  renderChrome();
+  $("main").focus({ preventScroll: true });
 }
 
 function renderChrome() {
@@ -382,8 +634,10 @@ function renderChrome() {
   $("sidebar-nav").setAttribute("aria-label", t("tests"));
   $("skip-link").textContent = t("skip");
   $("disclaimer").textContent = t("disclaimer");
+  $("privacy-note").textContent = t("privacy");
+  $("storage-settings").textContent = t("storageSettings");
   $("developer-label").textContent = t("developer");
-  $("local-status").textContent = t("saved");
+  $("local-status").textContent = t(canSave() ? "saved" : "sessionOnly");
   $("language-switch").setAttribute("aria-label", t("language"));
   document
     .querySelectorAll("[data-language]")
@@ -400,6 +654,7 @@ function renderChrome() {
   $("scrim").setAttribute("aria-label", t("closeMenu"));
   renderSidebarState();
   renderMenu();
+  renderStorageBanner();
 }
 
 function renderSidebarState() {
@@ -436,6 +691,7 @@ function footnote() {
 
 function renderHome() {
   const data = metricData();
+  const wrong = getTest("wrong");
   const cards = [
     ["clipboard-check", "solved", num(data.totals.answered), "", "allAttempts"],
     [
@@ -458,7 +714,11 @@ function renderHome() {
   return `<section aria-labelledby="home-title"><div class="page-heading"><div><h1 id="home-title">${t("dashboard")}</h1><p>${t("intro")}</p></div><span class="aircraft-tag">${icon("plane")} DIAMOND DA20-C1</span></div>
     <div class="metrics">${cards.map(([symbol, label, value, color, help]) => `<div class="metric ${color}" title="${t(help)}"><div class="metric-top"><span>${t(label)}</span>${icon(symbol)}</div><strong class="metric-value">${value}</strong><p class="metric-detail">${label === "average" ? t("correctPerTest", { n: data.count ? num(data.correct) : "—" }) : t(label === "fullTests" ? "fullOnly" : "allAttempts")}</p></div>`).join("")}</div>
     <div class="section-heading"><div><h2>${t("tests")}</h2><p>${t("selectTest")}</p></div><span>${t("bank")}</span></div>
-    <div class="test-grid">${tests
+    <div class="test-grid">${[
+      ...tests,
+      getTest("all"),
+      ...(wrong ? [wrong] : []),
+    ]
       .map((test, index) => {
         const run = state.runs[test.id];
         const answered = progress(test, run);
@@ -467,9 +727,10 @@ function renderHome() {
           : answered
             ? t("inProgress", { n: answered, total: test.questions.length })
             : t("notStarted");
-        return `<button class="test-card" data-test="${test.id}"><span class="test-card-number">${String(index + 1).padStart(2, "0")}</span><div class="test-card-copy"><h3>${esc(title(test))}</h3><p>${t("questionCount", { n: test.questions.length })} <span>· ${status}</span></p><div class="mini-progress"><span style="width:${(answered / test.questions.length) * 100}%"></span></div></div>${icon("arrow-right")}</button>`;
+        return `<button class="test-card" data-test="${test.id}"><span class="test-card-number">${index < tests.length ? String(index + 1).padStart(2, "0") : icon(test.id === "all" ? "book-2" : "rotate-clockwise")}</span><div class="test-card-copy"><h3>${esc(title(test))}</h3><p>${t("questionCount", { n: test.questions.length })} <span>· ${status}</span></p><div class="mini-progress"><span style="width:${(answered / test.questions.length) * 100}%"></span></div></div>${icon("arrow-right")}</button>`;
       })
-      .join("")}</div></section>
+      .join("")}</div>
+    ${!wrong && tests.every((test) => state.covered.includes(test.id)) ? `<p class="practice-subtitle">${t("wrongEmpty")}</p>` : ""}</section>
     <section class="recent-section" aria-labelledby="recent-title"><div class="section-heading"><h2 id="recent-title">${t("recent")}</h2><span>${t("recentHint")}</span></div>
       ${
         state.history.length
@@ -477,7 +738,7 @@ function renderHome() {
               .slice(-5)
               .reverse()
               .map((result) => {
-                const test = tests.find((item) => item.id === result.testId);
+                const test = getTest(result.testId);
                 const date = result.date
                   ? new Date(result.date).toLocaleString(
                       state.language === "tr" ? "tr-TR" : "en-GB",
@@ -499,7 +760,6 @@ function renderHome() {
 function questionStatus(question, run, index) {
   if (question.answer === null) return "review";
   if (!Number.isInteger(run.choices[index])) return "blank";
-  if (!run.finished && !run.revealed[index]) return "answered";
   return run.choices[index] === question.answer ? "correct" : "wrong";
 }
 const statusKey = {
@@ -513,7 +773,7 @@ const statusKey = {
 function renderMap(test, run) {
   const answered = progress(test, run);
   const fraction = `${answered}/${test.questions.length}`;
-  const legend = ["answered", "correct", "wrong", "flagged"];
+  const legend = ["blank", "correct", "wrong", "flagged"];
   if (test.questions.some((q) => q.answer === null)) legend.push("review");
   return `<aside class="navigator" aria-label="${t("map")}"><div class="map-heading"><h2>${t("map")}</h2><span>${fraction}</span></div><div class="progress-track map-progress"><div class="progress-fill" style="width:${(answered / test.questions.length) * 100}%"></div></div>
     <button class="map-toggle" data-action="toggle-map" aria-expanded="${mapOpen}" aria-controls="map-content"><span>${icon("layout-dashboard")}${t("map")} <span>· ${fraction}</span></span>${icon("chevron-down")}</button>
@@ -524,7 +784,11 @@ function renderMap(test, run) {
       })
       .join(
         "",
-      )}</div><div class="legend">${legend.map((status) => `<span><i class="dot ${status}" aria-hidden="true"></i>${t(statusKey[status] || status)}</span>`).join("")}</div><p class="map-note">${t("mapNote")}</p></div></aside>`;
+      )}</div><div class="legend">${legend.map((status) => `<span><i class="dot ${status}" aria-hidden="true"></i>${t(statusKey[status] || status)}</span>`).join("")}</div><p class="map-note">${t(canSave() ? "mapNote" : "sessionOnly")}</p></div></aside>`;
+}
+
+function canSave() {
+  return consent === "accepted" && storageAvailable;
 }
 
 function sourceNote(test, index) {
@@ -541,19 +805,23 @@ function renderQuestion(test, run) {
   const selected = run.choices[run.index];
   const visible = run.finished || Boolean(run.revealed[run.index]);
   const unscored = question.answer === null;
+  const locked = run.finished || Number.isInteger(selected);
+  const incorrect =
+    !unscored && Number.isInteger(selected) && selected !== question.answer;
   const last = run.index === test.questions.length - 1;
   const nextAction = last ? (run.finished ? "results" : "finish") : "next";
   return `<section class="question-card" aria-labelledby="question-title"><div class="question-meta"><span class="question-number">${t("questionOf", { n: String(run.index + 1).padStart(2, "0"), total: test.questions.length })}</span><div class="question-tags"><span class="chip ${unscored ? "warning" : ""}">${t(unscored ? "unscored" : "singleAnswer")}</span></div></div>
     <h2 id="question-title" class="question-text" lang="en" tabindex="-1">${esc(question.prompt)}</h2>
     <div class="options" role="radiogroup" aria-labelledby="question-title">${question.options
       .map((text, option) => {
-        const correct = visible && option === question.answer;
-        const wrong = visible && !unscored && option === selected && !correct;
+        const correct =
+          (visible || option === selected) && option === question.answer;
+        const wrong = incorrect && option === selected;
         const checked = option === selected;
-        return `<label class="option${checked ? " is-selected" : ""}${correct ? " is-correct" : wrong ? " is-wrong" : ""}${run.finished ? " is-locked" : ""}"><input type="radio" name="answer" value="${option}" ${checked ? "checked" : ""} ${run.finished ? "disabled" : ""} aria-label="${letters[option]}. ${esc(text)}${correct ? ` — ${t("correctAnswers")}` : wrong ? ` — ${t("wrongAnswers")}` : ""}" lang="en"><span class="letter" aria-hidden="true">${letters[option]}</span><span class="option-text" lang="en">${esc(text)}</span><span class="option-mark" aria-hidden="true">${correct ? icon("check") : wrong ? icon("x") : checked ? icon("check") : ""}</span></label>`;
+        return `<label class="option${checked && unscored ? " is-neutral" : ""}${correct ? " is-correct" : wrong ? " is-wrong" : ""}${locked ? " is-locked" : ""}"><input type="radio" name="answer" value="${option}" ${checked ? "checked" : ""} ${locked ? "disabled" : ""} aria-label="${letters[option]}. ${esc(text)}${correct ? ` — ${t("correctAnswers")}` : wrong ? ` — ${t("wrongAnswers")}` : ""}" lang="en"><span class="letter" aria-hidden="true">${letters[option]}</span><span class="option-text" lang="en">${esc(text)}</span><span class="option-mark" aria-hidden="true">${correct ? icon("check") : wrong ? icon("x") : checked ? icon("check") : ""}</span></label>`;
       })
       .join("")}</div>
-    ${visible ? (unscored ? `<div class="answer-note warning" role="status">${icon("info-circle")}<span>${sourceNote(test, run.index)}</span></div>` : `<div class="answer-note" role="status">${icon("circle-check")}<span><strong>${t("correctOption", { letter: letters[question.answer] })}</strong><span class="answer-text" lang="en">${esc(question.options[question.answer])}</span></span></div>`) : ""}
+    ${visible ? (unscored ? `<div class="answer-note warning" role="status">${icon("info-circle")}<span>${sourceNote(test, run.index)}</span></div>` : `<div class="answer-note" role="status">${icon("circle-check")}<span><strong>${t("correctOption", { letter: letters[question.answer] })}</strong><span class="answer-text" lang="en">${esc(question.options[question.answer])}</span></span></div>`) : incorrect ? `<p class="answer-note incorrect-note">${icon("circle-x")}${t("wrongAnswers")}</p>` : ""}
     <div class="question-tools">${run.finished ? `<button class="text-button" data-action="results">${icon("chart-line")}${t("showResults")}</button>` : `<button class="text-button" data-action="reveal" aria-pressed="${visible}">${icon(visible ? "eye-off" : "eye")}${t(unscored ? (visible ? "hideNote" : "showNote") : visible ? "hideAnswer" : "showAnswer")}</button>`}
       <button class="text-button ${run.flags[run.index] ? "flagged" : ""}" data-action="flag" aria-pressed="${Boolean(run.flags[run.index])}">${icon("flag")}${t(run.flags[run.index] ? "unflag" : "flag")}</button></div></section>
     <div class="paging"><button class="button button-outline" data-action="previous" ${run.index === 0 ? "disabled" : ""}>${icon("arrow-left")}${t("previous")}</button><span class="keyboard-hint">${t("keyboard")}</span><button class="button button-primary" data-action="${nextAction}">${t(last ? (run.finished ? "showResults" : "finish") : "next")}${icon(last ? "check" : "arrow-right")}</button></div>`;
@@ -561,7 +829,7 @@ function renderQuestion(test, run) {
 
 function renderResults(test, run, result) {
   const score = num((result.correct / result.total) * 100);
-  return `<section class="question-card results" aria-labelledby="question-title"><span class="result-emblem">${icon("clipboard-check")}</span><h2 id="question-title" tabindex="-1">${t("resultTitle")}</h2><p>${t("resultSummary", result)}</p><div class="score" aria-label="${t("scoreLabel", { n: score })}">${score}<span> / 100</span></div>
+  return `<section class="question-card results" aria-labelledby="question-title"><span class="result-emblem">${icon("clipboard-check")}</span><h2 id="question-title" tabindex="-1">${t("resultTitle")}</h2>${run.timedOut ? `<p class="time-up">${t("timeUp")}</p>` : ""}<p>${t("resultSummary", result)}</p><div class="score" aria-label="${t("scoreLabel", { n: score })}">${score}<span> / 100</span></div>
     <div class="result-stats">${[
       ["correct", "good"],
       ["wrong", "bad"],
@@ -574,7 +842,20 @@ function renderResults(test, run, result) {
       .join(
         "",
       )}</div>${result.review ? `<p>${t("excluded", { n: result.review })}</p>` : ""}
-    <div class="result-actions"><button class="button button-outline" data-action="review">${icon("eye")}${t("review")}</button><button class="button button-primary" data-action="restart">${icon("rotate-clockwise")}${t("restart")}</button></div><button class="text-button" data-action="home">${icon("arrow-left")}${t("backHome")}</button></section>`;
+    <div class="result-actions"><button class="button button-outline" data-action="review">${icon("eye")}${t("review")}</button><button class="button button-primary" data-action="restart">${icon("rotate-clockwise")}${t("restart")}</button>${test.id !== "wrong" && getTest("wrong") ? `<button class="button button-outline" data-test="wrong">${t("wrongTest")}</button>` : ""}</div><button class="text-button" data-action="home">${icon("arrow-left")}${t("backHome")}</button></section>`;
+}
+
+function remainingSeconds(run) {
+  return Math.max(0, Math.ceil((run.deadline - Date.now()) / 1000));
+}
+
+function formatTime(seconds) {
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function timerLabel(run) {
+  const seconds = remainingSeconds(run);
+  return `<div class="test-timer${seconds <= 60 ? " is-urgent" : ""}"><span>${t("timeLeft")}</span><strong role="timer" aria-label="${t("timeLeft")}" id="test-countdown">${formatTime(seconds)}</strong></div>`;
 }
 
 function renderPractice() {
@@ -582,12 +863,14 @@ function renderPractice() {
   const run = runFor();
   const result = summarize(test, run);
   const answered = progress(test, run);
-  return `<div class="practice-toolbar"><div><p class="practice-caption">${t(run.finished ? "reviewMode" : "practice")}</p><h1 class="practice-title">${esc(title(test))}</h1><p class="practice-subtitle">${t("inProgress", { n: answered, total: test.questions.length })}</p></div><div class="toolbar-right"><span class="question-position">${run.index + 1} / ${test.questions.length}</span><button class="button button-outline button-small" data-action="${run.finished ? "results" : "finish"}">${t(run.finished ? "showResults" : "finish")}</button></div></div>
+  return `<div class="practice-toolbar"><div><p class="practice-caption">${t(run.finished ? "reviewMode" : "practice")}</p><h1 class="practice-title">${esc(title(test))}</h1><p class="practice-subtitle">${t("inProgress", { n: answered, total: test.questions.length })}</p></div><div class="toolbar-right">${run.finished ? "" : timerLabel(run)}<button class="button button-outline button-small" data-action="${run.finished ? "results" : "finish"}">${t(run.finished ? "showResults" : "finish")}</button></div></div>
     <div class="progress-track practice-progress" role="progressbar" aria-label="${t("answered")}" aria-valuemin="0" aria-valuemax="${test.questions.length}" aria-valuenow="${answered}"><div class="progress-fill" style="width:${(answered / test.questions.length) * 100}%"></div></div>
     <div class="practice-grid"><div class="quiz-column">${run.results ? renderResults(test, run, result) : renderQuestion(test, run)}</div>${renderMap(test, run)}</div>${footnote()}`;
 }
 
 function render() {
+  if (expireRuns()) save();
+  $("local-status").textContent = t(canSave() ? "saved" : "sessionOnly");
   $("page-label").textContent =
     view === "home" ? t("home") : title(currentTest());
   document.title = `${view === "home" ? t("dashboard") : title(currentTest())} · AFA SOP Pratik`;
@@ -605,9 +888,16 @@ function setDrawer(open, focus = true) {
 }
 
 function readRoute() {
+  clearTimeout(advanceTimer);
   const id = location.hash.startsWith("#test/") ? location.hash.slice(6) : "";
-  view = tests.some((test) => test.id === id) ? "test" : "home";
-  if (view === "test") state.active = id;
+  const test = getTest(id);
+  view = test ? "test" : "home";
+  if (test) {
+    state.active = id;
+    const run = runFor();
+    if (!run.finished && run.deadline === null)
+      run.deadline = Date.now() + duration(test);
+  }
   setDrawer(false, false);
   save();
   render();
@@ -638,6 +928,7 @@ function focusQuestion(scroll = false) {
 }
 
 function goToQuestion(index) {
+  clearTimeout(advanceTimer);
   const run = runFor();
   run.index = Math.max(0, Math.min(currentTest().questions.length - 1, index));
   run.results = false;
@@ -646,16 +937,56 @@ function goToQuestion(index) {
   focusQuestion(true);
 }
 
-function finishTest() {
-  const run = runFor();
+function finalizeRun(test, run, timedOut = false) {
   if (run.finished) return;
   state.history.push({
-    ...summarize(currentTest(), run),
-    testId: state.active,
+    ...summarize(test, run),
+    testId: test.id,
     date: new Date().toISOString(),
   });
+  recordCoverage(state, test, run);
   run.finished = true;
   run.results = true;
+  run.timedOut = timedOut;
+}
+
+function expireRuns() {
+  let changed = false;
+  const now = Date.now();
+  for (const [id, run] of Object.entries(state.runs)) {
+    if (run.finished || !Number.isFinite(run.deadline) || run.deadline > now)
+      continue;
+    const test = getTest(id);
+    if (!test) continue;
+    finalizeRun(test, run, true);
+    changed = true;
+    if (view === "test" && id === state.active) {
+      clearTimeout(advanceTimer);
+      if ($("confirmation").open) $("confirmation").close("timeout");
+      $("announcer").textContent = t("timeUp");
+    }
+  }
+  return changed;
+}
+
+function updateCountdown() {
+  if (expireRuns()) {
+    save();
+    render();
+    return;
+  }
+  const countdown = $("test-countdown");
+  if (!countdown || view !== "test") return;
+  const seconds = remainingSeconds(runFor());
+  countdown.textContent = formatTime(seconds);
+  countdown.parentElement.classList.toggle("is-urgent", seconds <= 60);
+}
+
+function finishTest() {
+  clearTimeout(advanceTimer);
+  const run = runFor();
+  if (run.finished) return;
+  finalizeRun(currentTest(), run, remainingSeconds(run) === 0);
   save();
   render();
   focusQuestion(true);
@@ -675,6 +1006,33 @@ function askToFinish() {
 
 function performAction(action) {
   if (action === "home") return navigate();
+  if (action === "storage-settings") {
+    consentOpen = true;
+    setDrawer(false, false);
+    renderStorageBanner();
+    return $("storage-banner").querySelector("button").focus();
+  }
+  if (action === "toggle-combine") {
+    combining = !combining;
+    if (combining && state.collapsed && !mobile.matches) {
+      state.collapsed = false;
+      save();
+      renderSidebarState();
+    }
+    renderMenu();
+    return document.querySelector('[data-action="toggle-combine"]').focus();
+  }
+  if (action === "start-combined") {
+    if (selectedTests.size < 2) return;
+    const mask = tests.reduce(
+      (value, test, index) =>
+        selectedTests.has(test.id) ? value | (1 << index) : value,
+      0,
+    );
+    combining = false;
+    selectedTests.clear();
+    return navigate(`mix-${mask}`);
+  }
   if (view !== "test") return;
   const run = runFor();
   if (action === "next") return goToQuestion(run.index + 1);
@@ -682,7 +1040,8 @@ function performAction(action) {
   if (action === "finish") return askToFinish();
   if (action === "review") return goToQuestion(0);
   if (action === "restart") {
-    state.runs[state.active] = newRun();
+    if (state.active === "wrong") delete state.runs.wrong;
+    state.runs[state.active] = newRun(currentTest());
     return goToQuestion(0);
   }
   if (action === "results") {
@@ -702,6 +1061,8 @@ function performAction(action) {
 }
 
 document.addEventListener("click", (event) => {
+  const consentButton = event.target.closest("[data-consent]");
+  if (consentButton) return chooseStorage(consentButton.dataset.consent);
   const testButton = event.target.closest("[data-test]");
   if (testButton) return navigate(testButton.dataset.test);
   const mapButton = event.target.closest("[data-index]");
@@ -711,6 +1072,17 @@ document.addEventListener("click", (event) => {
   }
   const button = event.target.closest("[data-action]");
   if (button) performAction(button.dataset.action);
+});
+$("sidebar-nav").addEventListener("change", (event) => {
+  const id = event.target.dataset.mix;
+  if (!id) return;
+  if (event.target.checked) selectedTests.add(id);
+  else selectedTests.delete(id);
+  const button = document.querySelector('[data-action="start-combined"]');
+  const label = t("startCombined", { n: selectedTests.size });
+  button.disabled = selectedTests.size < 2;
+  button.setAttribute("aria-label", label);
+  button.querySelector(".home-label").textContent = label;
 });
 document.querySelector(".brand").addEventListener("click", (event) => {
   event.preventDefault();
@@ -723,14 +1095,35 @@ $("skip-link").addEventListener("click", (event) => {
 $("main").addEventListener("change", (event) => {
   if (event.target.name !== "answer" || view !== "test") return;
   const run = runFor();
-  if (run.finished) return;
+  if (run.finished || Number.isInteger(run.choices[run.index])) return;
+  if (!remainingSeconds(run)) return updateCountdown();
+  const questionIndex = run.index;
+  const test = currentTest();
   const choice = Number(event.target.value);
-  run.choices[run.index] = choice;
+  run.choices[questionIndex] = choice;
+  const answer = test.questions[questionIndex].answer;
   save();
   render();
-  document
-    .querySelector(`input[name="answer"][value="${choice}"]`)
-    ?.focus({ preventScroll: true });
+  $("question-title")?.focus({ preventScroll: true });
+  if (answer === null) return;
+  $("announcer").textContent = t(
+    choice === answer ? "correctAnswers" : "wrongAnswers",
+  );
+  if (choice !== answer) return;
+  advanceTimer = setTimeout(() => {
+    if (
+      view !== "test" ||
+      currentTest().id !== test.id ||
+      runFor() !== run ||
+      run.finished ||
+      run.index !== questionIndex
+    )
+      return;
+    if (!remainingSeconds(run)) return updateCountdown();
+    if (questionIndex + 1 < test.questions.length)
+      goToQuestion(questionIndex + 1);
+    else if (summarize(test, run).blank === 0) finishTest();
+  }, 550);
 });
 $("theme-toggle").addEventListener("click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
@@ -773,7 +1166,9 @@ document.addEventListener("keydown", (event) => {
     }
     if (event.key === "Tab") {
       const elements = [
-        ...$("sidebar").querySelectorAll("a[href],button:not([disabled])"),
+        ...$("sidebar").querySelectorAll(
+          "a[href],button:not([disabled]),input",
+        ),
       ].filter((el) => el.getClientRects().length);
       const first = elements[0],
         last = elements[elements.length - 1];
@@ -804,3 +1199,13 @@ document.addEventListener("keydown", (event) => {
 
 readRoute();
 renderChrome();
+setInterval(updateCountdown, 250);
+window.addEventListener("pageshow", updateCountdown);
+document.addEventListener("visibilitychange", updateCountdown);
+new ResizeObserver(() => {
+  if (consentOpen)
+    document.body.style.setProperty(
+      "--storage-banner-height",
+      `${$("storage-banner").offsetHeight}px`,
+    );
+}).observe($("storage-banner"));

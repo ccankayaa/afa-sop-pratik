@@ -6,7 +6,11 @@ Diamond DA20-C1 için bağımsız, kişisel SOP çalışma uygulaması. **6 test
 
 Sol menüden seçilen test doğrudan soru ekranında açılır. Cevabı gösterme, soru işaretleme, soru haritası, önceki/sonraki gezinme, test sonucu ve yeniden çözme desteklenir. Ana sayfada toplam çözülen, doğru/yanlış cevap, tam biten test, test başına ortalama doğru yüzdesi ve doğru sayısı gösterilir. İstatistikler test ekranında bulunmaz.
 
-İlerleme, sonuç geçmişi, dil, tema ve masaüstü menü tercihi aynı tarayıcıda saklanır. Önceki sürümün `afa-sop-pratik:v1` verileri korunur. Hesap veya sunucu gerekmez. Veriler başka cihazlarla eşitlenmez.
+Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmızı kalır ve başka bir soruya geçmek için gezinme düğmesi veya soru haritası kullanılır. Her soru için 75 saniye verilir. Süre tam dakikaya yuvarlanır ve test başına en az 5 dakikadır. Süre dolduğunda test otomatik bitirilir.
+
+Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar. Altı kaynak testin tüm puanlı soruları cevaplanıp testler bitirildikten sonra, hatalı cevaplanan sorular **Yanlışları tekrar çöz** testinde toplanır. Bu koşul birleşik ve tüm soruları içeren testlerle de karşılanabilir.
+
+**Kabul et** ilerlemeyi, sonuçları ve bitiş zamanını yerel depolamada tutar. Süre tarayıcı kapalıyken işlemeye devam eder. Önceki sürümün yerel verileri izin verildiğinde yüklenir. **Yalnızca gereklileri kabul et** yalnızca tercihi çerezde saklar. **Reddet** yerel ilerleme kaydını ve tercih çerezini siler. Her iki durumda da açık sayfada çözmeye devam edilebilir. Çerez tercihleri sol menünün altından değiştirilebilir. Uygulama kullanıcı verilerini sunucuda saklamaz.
 
 ## Çalıştırma ve Vercel
 
