@@ -12,7 +12,7 @@ Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmız
 
 Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar. Altı kaynak testin tüm puanlı soruları cevaplanıp testler bitirildikten sonra, hatalı cevaplanan sorular **Yanlışları tekrar çöz** testinde toplanır. Bu koşul birleşik ve tüm soruları içeren testlerle de karşılanabilir.
 
-**Kabul et** ilerlemeyi, sonuçları ve testin başlangıç zamanını yerel depolamada tutar. Süre tarayıcı kapalıyken işlemeye devam eder. Önceki sürümün yerel verileri izin verildiğinde yüklenir. **Yalnızca gereklileri kabul et** yalnızca tercihi çerezde saklar. **Reddet** yerel ilerleme kaydını ve tercih çerezini siler. Her iki durumda da açık sayfada çözmeye devam edilebilir. Çerez tercihleri sol menünün altından değiştirilebilir. Uygulama kullanıcı verilerini sunucuda saklamaz.
+Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri kabul et** seçenekleri dil ve tema seçimini tarayıcıda hatırlar. **Kabul et** ile ilerleme, sonuçlar ve testin başlangıç zamanı da yerel depolamada tutulur. Süre tarayıcı kapalıyken işlemeye devam eder. **Reddet** yerel kayıtları ve tercih çerezini siler. Çerez tercihleri sol menünün altından değiştirilebilir. Uygulama kullanıcı verilerini sunucuda saklamaz.
 
 ## Çalıştırma ve Vercel
 

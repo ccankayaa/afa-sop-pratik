@@ -2,6 +2,7 @@
 
 const tests = window.QUESTION_BANK;
 const storageKey = "afa-sop-pratik:v1";
+const preferenceKey = "afa-sop-pratik:preferences";
 const consentCookie = "afa_sop_storage";
 const allQuestions = tests.flatMap((test) =>
   test.questions.map((question, index) => ({
@@ -33,6 +34,7 @@ const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const mobile = matchMedia("(max-width: 959px)");
 const strings = {
   tr: {
+    appName: "SOP Pratik",
     allQuestions: "Tüm soruları çöz",
     combine: "Testleri birleştir",
     mixedTest: "Birleşik test",
@@ -55,7 +57,7 @@ const strings = {
     closeSearch: "Aramayı kapat",
     storageTitle: "Çerez ve tarayıcı depolama tercihleri",
     storageIntro:
-      "Kabul edersen ilerleme ve istatistikler bu tarayıcıda saklanır. Yalnızca gerekli çerezleri seçersen sadece çerez tercihin hatırlanır.",
+      "Kabul edersen ilerleme ve istatistikler bu tarayıcıda saklanır. Yalnızca gereklileri seçersen çerez, dil ve tema tercihlerin hatırlanır.",
     acceptStorage: "Kabul et",
     necessaryStorage: "Yalnızca gereklileri kabul et",
     rejectStorage: "Reddet",
@@ -154,6 +156,7 @@ const strings = {
       "Kaynakta True işaretli; aynı belgedeki diğer soru fren kullanımının kalkış mesafesini artırdığını belirtiyor. Bu çelişki nedeniyle soru puan dışıdır.",
   },
   en: {
+    appName: "SOP Practice",
     allQuestions: "Practice all questions",
     combine: "Combine tests",
     mixedTest: "Combined test",
@@ -176,7 +179,7 @@ const strings = {
     closeSearch: "Close search",
     storageTitle: "Cookie and browser storage preferences",
     storageIntro:
-      "Accept to save progress and statistics in this browser. Essential cookies only remembers your cookie preference.",
+      "Accept to save progress and statistics in this browser. Essentials only remembers your cookie, language and theme preferences.",
     acceptStorage: "Accept",
     necessaryStorage: "Accept essentials only",
     rejectStorage: "Reject",
@@ -377,10 +380,11 @@ function restore() {
       /* Keep temporary state available. */
     }
   }
+  const preferences = readPreferences();
   const restored = {
     active: tests[0].id,
-    theme: "dark",
-    language: "tr",
+    theme: preferences.theme ?? (saved?.theme === "light" ? "light" : "dark"),
+    language: preferences.language ?? "en",
     collapsed: false,
     runs: {},
     history: [],
@@ -388,8 +392,6 @@ function restore() {
     missed: [],
   };
   if (!saved || typeof saved !== "object") return restored;
-  if (["dark", "light"].includes(saved.theme)) restored.theme = saved.theme;
-  if (["tr", "en"].includes(saved.language)) restored.language = saved.language;
   restored.collapsed = saved.collapsed === true;
   if (Array.isArray(saved.history))
     restored.history = saved.history.filter(
@@ -477,6 +479,35 @@ function validKeys(items) {
         ),
       ]
     : [];
+}
+
+function readPreferences() {
+  if (consent !== "accepted" && consent !== "essential") return {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(preferenceKey));
+    return {
+      language: ["tr", "en"].includes(saved?.language)
+        ? saved.language
+        : undefined,
+      theme: ["dark", "light"].includes(saved?.theme) ? saved.theme : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function savePreferences() {
+  if (
+    (consent !== "accepted" && consent !== "essential") ||
+    readConsent() !== consent
+  )
+    return;
+  try {
+    const { language, theme } = state;
+    localStorage.setItem(preferenceKey, JSON.stringify({ language, theme }));
+  } catch {
+    // The chosen theme and language still apply to the current page.
+  }
 }
 
 function save() {
@@ -634,8 +665,8 @@ function chooseStorage(choice) {
     state = {
       ...saved,
       ...(Object.keys(session.runs).length ? { active: session.active } : {}),
-      language: session.language === "tr" ? saved.language : session.language,
-      theme: session.theme === "dark" ? saved.theme : session.theme,
+      language: session.language,
+      theme: session.theme,
       collapsed: saved.collapsed || session.collapsed,
       runs: { ...saved.runs, ...session.runs },
       history: [...saved.history, ...session.history],
@@ -646,10 +677,12 @@ function chooseStorage(choice) {
   } else if (choice !== "accepted") {
     try {
       localStorage.removeItem(storageKey);
+      if (choice === "rejected") localStorage.removeItem(preferenceKey);
     } catch {
       /* Storage may be blocked. */
     }
   }
+  savePreferences();
   readRoute();
   renderChrome();
   $("main").focus({ preventScroll: true });
@@ -693,6 +726,10 @@ function renderChrome() {
     );
   document.querySelector(".brand-copy strong").innerHTML =
     `SOP<span>${state.language === "tr" ? "PRATİK" : "PRACTICE"}</span>`;
+  document
+    .querySelector(".brand")
+    .setAttribute("aria-label", `AFA ${t("appName")}`);
+  document.querySelector(".breadcrumb-brand").textContent = t("appName");
   $("close-menu").innerHTML = icon("x");
   $("close-menu").setAttribute("aria-label", t("closeMenu"));
   $("scrim").setAttribute("aria-label", t("closeMenu"));
@@ -932,7 +969,7 @@ function render() {
   $("local-status").textContent = t(canSave() ? "saved" : "sessionOnly");
   $("page-label").textContent =
     view === "home" ? t("home") : title(currentTest());
-  document.title = `${view === "home" ? t("dashboard") : title(currentTest())} · AFA SOP Pratik`;
+  document.title = `${view === "home" ? t("dashboard") : title(currentTest())} · AFA ${t("appName")}`;
   $("main").innerHTML =
     `${!storageAvailable ? `<p class="storage-note" role="status">${t("storage")}</p>` : ""}${view === "home" ? renderHome() : renderPractice()}`;
   renderMenu();
@@ -1274,14 +1311,14 @@ $("search-dialog").addEventListener("keydown", (event) => {
 });
 $("theme-toggle").addEventListener("click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
-  save();
+  savePreferences();
   renderChrome();
 });
 $("language-switch").addEventListener("click", (event) => {
   const button = event.target.closest("[data-language]");
   if (!button) return;
   state.language = button.dataset.language;
-  save();
+  savePreferences();
   renderChrome();
   render();
   button.focus({ preventScroll: true });
