@@ -29,7 +29,7 @@ npm run dev
 
 Ardından `http://localhost:3000` adresini açın. Üretim derlemesi için `npm run build`, yerel önizleme için `npm start` kullanın. Vercel projesinde **Next.js** preset'i ve varsayılan derleme/çıktı ayarları kullanılır. Ana sayfa ve bilinen test sayfaları önceden oluşturulur. Eski `/#test/normal` bağlantıları ve doğrudan `/test/normal` bağlantıları desteklenir. Bilinmeyen adresler gerçek 404 döndürür. Git entegrasyonu bağlıysa `main` dalındaki commit otomatik yayımlanır.
 
-[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) canlı sitedeki ziyaretleri tarayıcı depolama tercihinden bağımsız ve çerez kullanmadan ölçer. Cevaplar, arama metni ve site URL'sindeki sorgu parametreleri gönderilmez. Ülke, tarayıcı ve **online** ziyaretçi göstergesi Vercel **Analytics** ekranındadır. **Logs** bölümünde ana sayfa ve test girişleri için `practice_request` satırlarını arayın. Log satırları URL sorgusu, çerez veya cevap içermez.
+[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) canlı sitedeki ana sayfa, dil ve test rotalarını ayrı ayrı ve çerez kullanmadan ölçer. **Analytics** ekranında ülke, tarayıcı, cihaz türü, tekil ziyaretçi tahmini ve **online** ziyaretçiler görünür. **Logs** bölümündeki `practice_request` satırlarında Vercel'in IP konumundan çıkardığı ülke, bölge ve yaklaşık şehir ile tarayıcı, işletim sistemi, cihaz türü ve varsa cihaz modeli bulunur. Model yalnızca tarayıcı bildirdiğinde kullanılabilir. Uygulama bu satırlara IP adresi, kalıcı cihaz kimliği, URL sorgusu, çerez veya cevap yazmaz. İlçe veya kesin fiziksel cihaz sayısı bu ölçümlerden çıkarılamaz.
 
 ## Puanlama
 
