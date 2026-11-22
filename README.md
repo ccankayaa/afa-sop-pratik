@@ -6,7 +6,7 @@ Diamond DA20-C1 için bağımsız, kişisel SOP çalışma uygulaması. Altı an
 
 Sol menüden seçilen test doğrudan soru ekranında açılır. Cevabı gösterme, soru işaretleme, soru haritası, önceki/sonraki gezinme, test sonucu ve yeniden çözme desteklenir. Ana sayfada toplam çözülen, doğru/yanlış cevap, tam biten test, test başına ortalama doğru yüzdesi ve doğru sayısı gösterilir. İstatistikler test ekranında bulunmaz.
 
-Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmızı kalır ve başka bir soruya geçmek için gezinme düğmesi veya soru haritası kullanılır. Test sayacı 00:00’dan başlar ve testin başlangıcından beri geçen süreyi gösterir. Sonuçta her sorunun açık ve sekmenin görünür olduğu süre ile bunların toplamı gösterilir. Soru araması açıkken geçirilen süre bu ölçüme dahil edilmez.
+Doğru seçimden 100 ms sonra sonraki soru açılır. Yanlış seçim kırmızı kalır. Sayaç teste girişte 00:00’dan başlar ve testten çıkınca sıfırlanır. Sekme gizlendiğinde, pencere odağı kaybolduğunda veya soru araması açıldığında sayaç durur. Aynı soru beş dakika açık kalınca sayaç yine durur ve sonraki tıklamada veya cevapta devam eder. Manuel duraklatmayı sayaç düğmesiyle kaldırabilirsin. Sonuç ekranındaki soru süreleri, ilgili denemede birikmiş aktif çalışma süresidir.
 
 Her sorunun sol üstünde benzersiz bir ID görünür. Üst menüdeki **Soru ara** ile ID’yi (ör. `AFA-032`) veya soru ve şıklardaki kelimeleri arayabilirsin. Sonucu şıklarıyla açabilir ve doğrudan ilgili soruya gidebilirsin.
 
@@ -16,19 +16,20 @@ Sol menüde **Testleri birleştir** ile en az iki ana test seçilebilir. **Tüm 
 
 **Görülmemiş sorular** testini açtığında, ana bankada daha önce soru ekranında açmadığın sorulardan yeni bir liste oluşturulur. Çözüm yüzdesi, en az bir kez cevaplanan benzersiz soruların ana bankaya oranıdır. Test kartları deneme ve tekrar sayısını, soru kartları cevaplama sayısını gösterir. Ortalama puan, gönderilen puanlı testlerin 100 üzerinden puanlarının ortalamasıdır. Eski sürümde soru bazında kayıt tutulmadığı için önceki sayılar eldeki denemelerden çıkarılır.
 
-Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri kabul et** seçenekleri dil ve tema seçimini tarayıcıda hatırlar. **Kabul et** ile ilerleme, sonuçlar ve testin başlangıç zamanı da yerel depolamada tutulur. Süre tarayıcı kapalıyken işlemeye devam eder. **Reddet** yerel kayıtları ve tercih çerezini siler. Çerez tercihleri sol menünün altından değiştirilebilir.
+Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri kabul et** seçenekleri dil ve tema seçimini tarayıcıda hatırlar. **Kabul et** ile ilerleme ve sonuçlar da yerel depolamada tutulur. **Reddet** yerel kayıtları ve tercih çerezini siler. Çerez tercihleri sol menünün altından değiştirilebilir.
 
 ## Çalıştırma ve Vercel
 
-Yerel kullanım için npm bağımlılığı gerekmez. Proje klasöründe:
+Uygulama Next.js App Router ve Node.js 24 kullanır. Proje klasöründe:
 
 ```sh
-python -m http.server 4173
+npm ci
+npm run dev
 ```
 
-Ardından `http://localhost:4173` adresini açın. Vercel'de proje **Other** olarak dağıtılır. `node scripts/build.mjs` uygulamayı ve soru bankasını tek JavaScript dosyasında birleştirip `dist/` klasörüne yazar. `vercel.json`, doğrudan açılan `/tr`, `/en` ve `/test/normal` gibi uygulama yollarını ana sayfa dosyasına yönlendirir. Eski `/#test/normal` bağlantıları da çalışır. Bilinmeyen adresler 404 olarak döner. Git entegrasyonu bağlıysa `main` dalına gönderilen commit otomatik yayımlanır.
+Ardından `http://localhost:3000` adresini açın. Üretim derlemesi için `npm run build`, yerel önizleme için `npm start` kullanın. Vercel projesinde **Next.js** preset'i ve varsayılan derleme/çıktı ayarları kullanılır. Ana sayfa ve bilinen test sayfaları önceden oluşturulur. Eski `/#test/normal` bağlantıları ve doğrudan `/test/normal` bağlantıları desteklenir. Bilinmeyen adresler gerçek 404 döndürür. Git entegrasyonu bağlıysa `main` dalındaki commit otomatik yayımlanır.
 
-[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) canlı sitedeki ziyaretleri tarayıcı depolama tercihinden bağımsız ve çerez kullanmadan ölçer. Cevaplar, arama metni ve URL sorgu parametreleri gönderilmez. Ülke, tarayıcı ve **online** ziyaretçi göstergesi Vercel **Analytics** ekranındadır. HTTP hata tanısı için Vercel **Logs** bölümünü kullanın. Web Analytics sayfa ziyaretlerini ölçer, tüm statik dosya isteklerinin kaydı değildir.
+[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) canlı sitedeki ziyaretleri tarayıcı depolama tercihinden bağımsız ve çerez kullanmadan ölçer. Cevaplar, arama metni ve site URL'sindeki sorgu parametreleri gönderilmez. Ülke, tarayıcı ve **online** ziyaretçi göstergesi Vercel **Analytics** ekranındadır. **Logs** bölümünde ana sayfa ve test girişleri için `practice_request` satırlarını arayın. Log satırları URL sorgusu, çerez veya cevap içermez.
 
 ## Puanlama
 
@@ -44,7 +45,7 @@ Soru bankası paylaşılan `grnd class -.docx` AFA SOP çalışma belgesinden ak
 
 **AFA ile bağlantısı yoktur. Resmî belge veya eğitim materyali değildir.** Uçuşta güncel, kontrollü SOP/AFM esas alınır.
 
-AFA logosu, kullanıcının talebiyle [AFA'nın web sitesinden](https://afa.aero/afa-logo-light.png) alınmış olup ilgili sahibine aittir. Arayüz ikonları [Tabler Icons](https://github.com/tabler/tabler-icons) MIT lisanslıdır; lisans `assets/Tabler-LICENSE.txt` içindedir. Yazı tipi sistem fontudur; uygulama çalışma sırasında harici font, CDN veya API isteği yapmaz.
+AFA logosu [AFA'nın web sitesinden](https://afa.aero/afa-logo-light.png) alınmış olup ilgili sahibine aittir. Arayüz ikonları [Tabler Icons](https://github.com/tabler/tabler-icons) MIT lisanslıdır. Lisans `assets/Tabler-LICENSE.txt` içindedir. Uygulama ikonlarını sayfanın içine gömer ve sistem yazı tipini kullanır.
 
 ## Doğrulama
 

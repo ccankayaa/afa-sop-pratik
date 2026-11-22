@@ -1811,7 +1811,8 @@ dialog::backdrop {
   color: var(--bad);
 }
 .test-timer {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   padding: 8px 11px;
@@ -1821,6 +1822,28 @@ dialog::backdrop {
   background: var(--surface);
   color: var(--muted);
   white-space: nowrap;
+}
+.icon-sprite {
+  position: absolute;
+  pointer-events: none;
+}
+.timer-toggle.icon-button {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+}
+.timer-toggle .icon {
+  width: 15px;
+  height: 15px;
+}
+.timer-status:empty {
+  display: none;
+}
+.timer-status {
+  grid-column: 1 / -1;
+  white-space: normal;
+  font-size: 10px;
+  color: var(--muted);
 }
 .timer-icon {
   display: grid;
