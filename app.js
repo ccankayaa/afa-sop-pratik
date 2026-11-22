@@ -1,25 +1,37 @@
 "use strict";
 
-const tests = window.QUESTION_BANK;
+const bankTests = window.QUESTION_BANK;
+const tests = bankTests.filter((test) => test.id !== "similar");
 const storageKey = "afa-sop-pratik:v1";
 const preferenceKey = "afa-sop-pratik:preferences";
 const consentCookie = "afa_sop_storage";
 const analyticsCookie = "afa_sop_analytics";
 const scoringVersion = 2;
+const bankVersion = 2;
 const newlyScoredIds = new Set(["AFA-022", "AFA-037", "AFA-080", "AFA-112"]);
-const allQuestions = tests.flatMap((test) =>
+const allQuestions = bankTests.flatMap((test) =>
   test.questions.map((question, index) => ({
     ...question,
-    key: `${test.id}/${index}`,
+    key: question.questionId,
     source: test.id,
+    position: index,
   })),
 );
 const questionsByKey = new Map(
   allQuestions.map((question) => [question.key, question]),
 );
-const questionsById = new Map(
-  allQuestions.map((question) => [question.questionId, question]),
+const questionsById = questionsByKey;
+const primaryQuestions = allQuestions.filter(
+  (question) => question.source !== "similar",
 );
+const previousTestLayouts = {
+  normal: questionIdRange(1, 20),
+  "normal-b": questionIdRange(21, 40),
+  emergency: questionIdRange(41, 60),
+  "emergency-b": questionIdRange(61, 94),
+  "emergency-2": questionIdRange(95, 117),
+  extra: questionIdRange(118, 144),
+};
 const searchIndex = allQuestions.map((question) => ({
   question,
   prompt: searchText(question.prompt),
@@ -88,7 +100,7 @@ const strings = {
     intro: "Diamond DA20-C1 · SOP sınavına kendi hızında hazırlan.",
     tests: "Testler",
     questionCount: "{n} soru",
-    bank: "6 test · 144 soru",
+    bank: "{n} ana soru · {similar} benzer soru",
     selectTest: "Bir test seç, kaldığın yerden devam et.",
     menu: "Çalışma menüsü",
     openMenu: "Menüyü aç",
@@ -215,7 +227,7 @@ const strings = {
     intro: "Diamond DA20-C1 · Prepare for your SOP exam at your own pace.",
     tests: "Tests",
     questionCount: "{n} questions",
-    bank: "6 tests · 144 questions",
+    bank: "{n} core questions · {similar} similar questions",
     selectTest: "Choose a test. Pick up where you left off.",
     menu: "Study navigation",
     openMenu: "Open menu",
@@ -295,6 +307,7 @@ const strings = {
   },
 };
 const testTitles = {
+  similar: ["Benzer Sorular", "Similar Questions"],
   normal: ["Normal Prosedürler", "Normal Procedures"],
   "normal-b": ["Normal Prosedürler · Varyant", "Normal Procedures · Variant"],
   emergency: ["Acil Durum Prosedürleri", "Emergency Procedures"],
@@ -337,13 +350,13 @@ const title = (test) =>
   );
 
 function getTest(id, data = state) {
-  const base = tests.find((test) => test.id === id);
+  const base = bankTests.find((test) => test.id === id);
   if (base)
     return {
       ...base,
       questions: allQuestions.filter((question) => question.source === id),
     };
-  if (id === "all") return { id, questions: allQuestions };
+  if (id === "all") return { id, questions: primaryQuestions };
   if (id === "unseen") {
     const questions =
       data.runs.unseen?.keys?.map((key) => questionsByKey.get(key)) ??
@@ -371,6 +384,30 @@ function getTest(id, data = state) {
       sources.includes(question.source),
     ),
   };
+}
+
+function questionIdRange(first, last) {
+  return Array.from(
+    { length: last - first + 1 },
+    (_, index) => `AFA-${String(first + index).padStart(3, "0")}`,
+  );
+}
+
+function resolvePreviousKey(key) {
+  if (typeof key !== "string") return undefined;
+  const [source, position] = key.split("/");
+  return previousTestLayouts[source]?.[position] ?? key;
+}
+
+function previousLayout(id) {
+  if (id === "all") return Object.values(previousTestLayouts).flat();
+  if (id.startsWith("mix-")) {
+    const mask = Number(id.slice(4));
+    return Object.values(previousTestLayouts).flatMap((keys, index) =>
+      mask & (1 << index) ? keys : [],
+    );
+  }
+  return previousTestLayouts[id];
 }
 
 const currentTest = () => getTest(state.active);
@@ -460,6 +497,7 @@ function restore() {
     errorCounts: {},
     incorrect: [],
     scoringVersion,
+    bankVersion,
   };
   if (!saved || typeof saved !== "object") return restored;
   const needsRescore = (id) =>
@@ -483,7 +521,12 @@ function restore() {
           (result) => result.testId === id && result.blank === 0,
         ),
     );
-  restored.missed = validKeys(saved.missed);
+  const needsBankMigration = saved.bankVersion !== bankVersion;
+  const oldKeys = (keys) =>
+    Array.isArray(keys)
+      ? keys.map(needsBankMigration ? resolvePreviousKey : (key) => key)
+      : [];
+  restored.missed = validKeys(oldKeys(saved.missed));
   const legacyErrors = !saved.errorCounts || !Array.isArray(saved.incorrect);
   const latest = new Map();
   if (!legacyErrors) {
@@ -521,7 +564,14 @@ function restore() {
   for (const [id, old] of Object.entries(saved.runs ?? {})) {
     if (!old || typeof old !== "object") continue;
     const generated = ["wrong", "worst", "unseen"].includes(id);
-    const keys = validKeys(old.keys, id === "unseen");
+    const previousKeys = generated
+      ? oldKeys(old.keys)
+      : needsBankMigration
+        ? previousLayout(id)
+        : undefined;
+    const keys = validKeys(previousKeys, id === "unseen").filter(
+      (key) => id !== "unseen" || questionsByKey.get(key).source !== "similar",
+    );
     if (generated && !keys.length) continue;
     if (generated) restored.runs[id] = { keys };
     const test = getTest(id, restored);
@@ -529,10 +579,20 @@ function restore() {
       if (generated) delete restored.runs[id];
       continue;
     }
+    const oldIndex = Math.max(0, Number.isInteger(old.index) ? old.index : 0);
+    const oldPositions = previousKeys
+      ? new Map(previousKeys.map((key, index) => [key, index]))
+      : null;
+    // Keep the same question when it still belongs to this test.
+    const resumedIndex = oldPositions
+      ? test.questions.findIndex(
+          (question) => (oldPositions.get(question.key) ?? -1) >= oldIndex,
+        )
+      : oldIndex;
     const run = {
       index: Math.min(
         test.questions.length - 1,
-        Math.max(0, Number.isInteger(old.index) ? old.index : 0),
+        resumedIndex === -1 ? test.questions.length - 1 : resumedIndex,
       ),
       choices: {},
       revealed: {},
@@ -542,7 +602,8 @@ function restore() {
       startedAt: Number.isFinite(old.startedAt)
         ? old.startedAt
         : Number.isFinite(old.deadline)
-          ? old.deadline - previousTimeLimit(test)
+          ? old.deadline -
+            previousTimeLimit(previousKeys ? { questions: previousKeys } : test)
           : null,
       questionMs: {},
       timingPartial: old.timingPartial === true || !old.questionMs,
@@ -552,7 +613,9 @@ function restore() {
     };
     test.questions.forEach((question, index) => {
       const questionId = question.questionId;
-      const choice = old.choices?.[index];
+      const position = oldPositions ? oldPositions.get(question.key) : index;
+      if (position === undefined) return;
+      const choice = old.choices?.[position];
       const changed = needsRescore(questionId);
       if (
         !changed &&
@@ -561,15 +624,15 @@ function restore() {
         choice < question.options.length
       )
         run.choices[index] = choice;
-      if (!changed && old.revealed?.[index]) run.revealed[index] = true;
-      if (old.flags?.[index]) run.flags[index] = true;
-      const elapsed = old.questionMs?.[index];
+      if (!changed && old.revealed?.[position]) run.revealed[index] = true;
+      if (old.flags?.[position]) run.flags[index] = true;
+      const elapsed = old.questionMs?.[position];
       if (Number.isFinite(elapsed) && elapsed >= 0)
         run.questionMs[index] = elapsed;
       if (
         index === run.index ||
         Number.isInteger(choice) ||
-        old.revealed?.[index] ||
+        old.revealed?.[position] ||
         run.flags[index] ||
         run.questionMs[index] !== undefined
       )
@@ -644,7 +707,7 @@ function validKeys(items, includeUnscored = false) {
 
 function unseenQuestions(data = state) {
   const seen = new Set(data.seen);
-  return allQuestions.filter((question) => !seen.has(question.questionId));
+  return primaryQuestions.filter((question) => !seen.has(question.questionId));
 }
 
 function isScoredId(id) {
@@ -843,6 +906,7 @@ function renderMenu() {
       .join("")}
     <div class="sidebar-tools">
       ${menuShortcut(getTest("all"), "book-2")}
+      ${menuShortcut(getTest("similar"), "book-2")}
       ${unseen ? menuShortcut(unseen, "eye-off") : ""}
       <button class="nav-home" data-action="toggle-combine" aria-expanded="${combining}" aria-label="${t("combine")}" title="${t("combine")}">${icon("arrows-maximize")}<span class="home-label">${t("combine")}</span></button>
       ${combining ? `<button class="button button-primary combine-start" data-action="start-combined" aria-label="${t("startCombined", { n: selectedTests.size })}" title="${t("startCombinedHint")}" ${selectedTests.size < 2 ? "disabled" : ""}>${icon("arrow-right")}<span class="home-label">${t("startCombined", { n: selectedTests.size })}</span></button>` : ""}
@@ -1020,21 +1084,23 @@ function renderHome() {
   const worst = availableReview("worst");
   const unseen = getTest("unseen");
   const remaining = unseenQuestions().length;
-  const solved = Object.keys(state.attempts).length;
+  const solved = primaryQuestions.filter(
+    (question) => state.attempts[question.questionId],
+  ).length;
   const coverageCards = [
     [
       "eye-off",
       "unseen",
       num(remaining),
       remaining
-        ? `${num(allQuestions.length - remaining)}/${allQuestions.length}`
+        ? `${num(primaryQuestions.length - remaining)}/${primaryQuestions.length}`
         : t("noUnseen"),
     ],
     [
       "target",
       "solvedCoverage",
-      `${num((solved / allQuestions.length) * 100)}%`,
-      t("solvedCoverageDetail", { n: solved, total: allQuestions.length }),
+      `${num((solved / primaryQuestions.length) * 100)}%`,
+      t("solvedCoverageDetail", { n: solved, total: primaryQuestions.length }),
     ],
     [
       "chart-line",
@@ -1065,10 +1131,11 @@ function renderHome() {
   return `<section aria-labelledby="home-title"><div class="page-heading"><div><h1 id="home-title">${t("dashboard")}</h1><p>${t("intro")}</p></div><span class="aircraft-tag">${icon("plane")} DIAMOND DA20-C1</span></div>
     <div class="metrics">${cards.map(([symbol, label, value, color, help]) => `<div class="metric ${color}" title="${t(help)}"><div class="metric-top"><span>${t(label)}</span>${icon(symbol)}</div><strong class="metric-value">${value}</strong><p class="metric-detail">${label === "average" ? t("correctPerTest", { n: data.count ? num(data.correct) : "—" }) : t(label === "fullTests" ? "fullOnly" : "allAttempts")}</p></div>`).join("")}</div>
     <div class="coverage-grid">${coverageCards.map(([symbol, label, value, detail]) => `<div class="metric" data-metric="${label}"><div class="metric-top"><span>${t(label)}</span>${icon(symbol)}</div><strong class="metric-value">${value}</strong><p class="metric-detail">${detail}</p></div>`).join("")}</div>
-    <div class="section-heading"><div><h2>${t("tests")}</h2><p>${t("selectTest")}</p></div><span>${t("bank")}</span></div>
+    <div class="section-heading"><div><h2>${t("tests")}</h2><p>${t("selectTest")}</p></div><span>${t("bank", { n: primaryQuestions.length, similar: allQuestions.length - primaryQuestions.length })}</span></div>
     <div class="test-grid">${[
       ...tests,
       getTest("all"),
+      getTest("similar"),
       ...(unseen ? [unseen] : []),
       ...(wrong ? [wrong] : []),
       ...(worst ? [worst] : []),
@@ -1473,7 +1540,7 @@ function renderSearchResults() {
         { question },
         index,
       ) => `<details class="search-match" ${index === 0 ? "open" : ""}>
-    <summary><span lang="en">${esc(question.prompt)}</span><small><span class="question-id">${esc(question.questionId)}</span> · ${esc(title({ id: question.source }))} · ${t("question")} ${Number(question.key.split("/")[1]) + 1}</small></summary>
+    <summary><span lang="en">${esc(question.prompt)}</span><small><span class="question-id">${esc(question.questionId)}</span> · ${esc(title({ id: question.source }))} · ${t("question")} ${question.position + 1}</small></summary>
     <ol type="A" lang="en">${question.options.map((option) => `<li>${esc(option)}</li>`).join("")}</ol>
     <button class="button button-outline button-small" type="button" data-search-key="${esc(question.key)}">${t("openQuestion")} ${icon("arrow-right")}</button>
   </details>`,
@@ -1493,7 +1560,7 @@ function openSearch() {
 function openSearchQuestion(key) {
   const question = questionsByKey.get(key);
   if (!question) return;
-  const index = Number(question.key.split("/")[1]);
+  const index = question.position;
   if ($("search-dialog").open) $("search-dialog").close();
   const hash = `#test/${question.source}`;
   if (location.hash !== hash) {

@@ -238,17 +238,6 @@ window.QUESTION_BANK = [
         "answer": 0
       },
       {
-        "questionId": "AFA-023",
-        "prompt": "Turn the fuel pump on for all low throttle operations, including taxiing and all flight operations when engine speed could fall below ........... RPM (eg. stalls, descents, spins, landings, etc.).",
-        "options": [
-          "1000 RPM",
-          "1200 RPM",
-          "1300 RPM",
-          "1400 RPM"
-        ],
-        "answer": 3
-      },
-      {
         "questionId": "AFA-024",
         "prompt": "A structural temperature indicator, installed on the spar bridge, indicates when the structural temperature limitation is exceeded (refer to Section 2.17). The indicator need only be checked if the OAT exceeds ?",
         "options": [
@@ -342,15 +331,6 @@ window.QUESTION_BANK = [
         "answer": 3
       },
       {
-        "questionId": "AFA-033",
-        "prompt": "After engine start oil pressure may advance above 100 PSI until Oil Temperature reaches normal operating temperatures.",
-        "options": [
-          "True",
-          "False"
-        ],
-        "answer": 1
-      },
-      {
         "questionId": "AFA-034",
         "prompt": "You can engage the starter if the propeller is moving but slow.",
         "options": [
@@ -358,26 +338,6 @@ window.QUESTION_BANK = [
           "False"
         ],
         "answer": 1
-      },
-      {
-        "questionId": "AFA-035",
-        "prompt": "BEFORE STARTING THE ENGINE, THE CANOPY MAY BE LEFT OPEN IF THE OUTSIDE TEMPERATURE IS MORE THAN 38°C",
-        "options": [
-          "True",
-          "False"
-        ],
-        "answer": 1
-      },
-      {
-        "questionId": "AFA-036",
-        "prompt": "FOR STRONG HEADWIND, CROSSWIND, DANGER OF WINDSHEAR OR TURBULENCE, A ........... APPROACH SPEED SHOULD BE SELECTED.",
-        "options": [
-          "HIGHER",
-          "LOWER",
-          "SAME",
-          "SAME or LOWER"
-        ],
-        "answer": 0
       },
       {
         "questionId": "AFA-037",
@@ -409,17 +369,6 @@ window.QUESTION_BANK = [
           "40 °C",
           "45 °C",
           "55 °C"
-        ],
-        "answer": 3
-      },
-      {
-        "questionId": "AFA-040",
-        "prompt": "DO NOT OPERATE ENGINE ABOVE ........ RPM UNTIL AN OIL TEMPERATURE INDICATION IS REGISTERED.",
-        "options": [
-          "2000",
-          "1200",
-          "1500",
-          "1000"
         ],
         "answer": 3
       }
@@ -767,35 +716,6 @@ window.QUESTION_BANK = [
         "answer": 0
       },
       {
-        "questionId": "AFA-072",
-        "prompt": "IF FIRE EXTINGUISHER IS USED, THE CABIN MUST BE VENTILATED.",
-        "options": [
-          "TRUE",
-          "FALSE"
-        ],
-        "answer": 0
-      },
-      {
-        "questionId": "AFA-073",
-        "prompt": "Where do you plan to land in case of defective main landing gear tire?",
-        "options": [
-          "Land on the side of runway corresponding to good tire",
-          "Left side of the runway",
-          "Land on the side of runway corresponding to defective tire",
-          "Centerline of the runway"
-        ],
-        "answer": 0
-      },
-      {
-        "questionId": "AFA-074",
-        "prompt": "While Accomplishing the ENGINE MALFUNCTION IN FLIGHT (ENGINE STOPPAGE) AIRSPEED SHOULD BE 73 KIAS (with flaps cruise)",
-        "options": [
-          "TRUE",
-          "FALSE"
-        ],
-        "answer": 0
-      },
-      {
         "questionId": "AFA-075",
         "prompt": "Write down the airspeeds for Emergency Landing with Engine off",
         "options": [
@@ -805,39 +725,6 @@ window.QUESTION_BANK = [
           "T/O: 60 KIAS · LDG: 64 KIAS · CRUISE: 55 KIAS"
         ],
         "answer": 2
-      },
-      {
-        "questionId": "AFA-076",
-        "prompt": "There is .... minutes of battery power at a discharge load of .... amperes when the battery is fully charged and properly maintained.",
-        "options": [
-          "30 / 30",
-          "30 / 20",
-          "20 / 30",
-          "20 / 20"
-        ],
-        "answer": 1
-      },
-      {
-        "questionId": "AFA-077",
-        "prompt": "IF AT ANY TIME THE VOLTMETER NEEDLE INDICATES IN THE ........... ARC, THE PILOT SHOULD LAND AT THE NEAREST SUITABLE AIRPORT AND SERVICE THE AIRCRAFT ACCORDINGLY BEFORE CONTINUING THE FLIGHT.",
-        "options": [
-          "RED",
-          "MAGENTA",
-          "YELLOW",
-          "WHITE"
-        ],
-        "answer": 0
-      },
-      {
-        "questionId": "AFA-078",
-        "prompt": "Which one of the following indication(s) is/are an electrical failure?",
-        "options": [
-          "Voltmeter indicates significantly lower than normal",
-          "Ammeter indicates negative",
-          "GEN Warning light is illuminated",
-          "All of above"
-        ],
-        "answer": 3
       },
       {
         "questionId": "AFA-079",
@@ -953,17 +840,6 @@ window.QUESTION_BANK = [
         "answer": 1
       },
       {
-        "questionId": "AFA-090",
-        "prompt": "IF AT ANY TIME THE VOLTMETER NEEDLE INDICATES IN THE ......... ATC. THE PILOT SHOULD LAND AT THE NEAREST SUITABLE AIRPORT AND SERVICE THE AIRCRAFT ACCORDINGLY BEFORE CONTINUING THE FLIGHT.",
-        "options": [
-          "MAGENTA",
-          "YELLOW",
-          "RED",
-          "WHITE"
-        ],
-        "answer": 2
-      },
-      {
         "questionId": "AFA-091",
         "prompt": "During Flaps Failure, if only CRUISE Flaps are available\nraise approach speed by ..... kts\nflat approach angle\nthrottle as required.",
         "options": [
@@ -975,17 +851,6 @@ window.QUESTION_BANK = [
         "answer": 3
       },
       {
-        "questionId": "AFA-092",
-        "prompt": "Full travel of the elevator trim system will take approximately .... seconds",
-        "options": [
-          "5",
-          "8",
-          "10",
-          "15"
-        ],
-        "answer": 2
-      },
-      {
         "questionId": "AFA-093",
         "prompt": "During precautionary landing, if no suitable level landing area can be found .......... landing should be performed, if possible",
         "options": [
@@ -995,17 +860,6 @@ window.QUESTION_BANK = [
           "Any slope"
         ],
         "answer": 0
-      },
-      {
-        "questionId": "AFA-094",
-        "prompt": "What is the EMERGENCY VHF Frequency.",
-        "options": [
-          "120.50 Mhz",
-          "123.45 Mhz",
-          "121.50 Mhz",
-          "122.77 Mhz"
-        ],
-        "answer": 2
       }
     ]
   },
@@ -1024,17 +878,6 @@ window.QUESTION_BANK = [
           "vA. Airplane Speed 112 KIAS"
         ],
         "answer": 2
-      },
-      {
-        "questionId": "AFA-096",
-        "prompt": "Recommended minimum flight idle speed ....... RPM, during idle power flight conditions and maneuvers.",
-        "options": [
-          "1400 RPM",
-          "1200 RPM",
-          "1300 RPM",
-          "1500 RPM"
-        ],
-        "answer": 0
       },
       {
         "questionId": "AFA-097",
@@ -1059,17 +902,6 @@ window.QUESTION_BANK = [
         "answer": 0
       },
       {
-        "questionId": "AFA-099",
-        "prompt": "Choose the positive and negative load factors for each column in the table.",
-        "options": [
-          "Vₐ: +4.4 / −2.2\nVₙₑ: +3.8 / −1.5\nT/O or LDG: +2.0 / 0",
-          "Vₐ: +3.8 / −1.5\nVₙₑ: +4.4 / −2.2\nT/O or LDG: +2.0 / −1.0",
-          "Vₐ: +4.4 / −2.2\nVₙₑ: +4.4 / −2.2\nT/O or LDG: +2.0 / 0",
-          "Vₐ: +4.4 / −2.2\nVₙₑ: +4.4 / −2.2\nT/O or LDG: +2.0 / −1.0"
-        ],
-        "answer": 2
-      },
-      {
         "questionId": "AFA-100",
         "prompt": "The maximum demonstrated crosswind component is ..... kts.",
         "options": [
@@ -1090,15 +922,6 @@ window.QUESTION_BANK = [
           "55"
         ],
         "answer": 3
-      },
-      {
-        "questionId": "AFA-102",
-        "prompt": "DO NOT ENGAGE STARTER IF PROPELLER IS WINDMILLING. ENGINE DAMAGE MAY RESULT",
-        "options": [
-          "True",
-          "False"
-        ],
-        "answer": 0
       },
       {
         "questionId": "AFA-103",
@@ -1162,28 +985,6 @@ window.QUESTION_BANK = [
         "answer": 3
       },
       {
-        "questionId": "AFA-109",
-        "prompt": "There is ........ minutes of battery power at a discharge load of .... amperes when the battery is fully charged and properly maintained.",
-        "options": [
-          "30 / 30",
-          "20 / 30",
-          "20 / 20",
-          "30 / 20"
-        ],
-        "answer": 3
-      },
-      {
-        "questionId": "AFA-110",
-        "prompt": "What is the glide ratio of DA-20 C1 with flaps cruise at best gliding speed?",
-        "options": [
-          "11:2",
-          "12:1",
-          "10:1",
-          "11:1"
-        ],
-        "answer": 3
-      },
-      {
         "questionId": "AFA-111",
         "prompt": "WHAT SHOULD BE THE LIFT-OFF SPEED FOR THE SHORTEST POSSIBLE TAKE-OFF DISTANCE TO CLEAR A 15 M (50FT) OBSTACLE?",
         "options": [
@@ -1202,61 +1003,6 @@ window.QUESTION_BANK = [
           "False"
         ],
         "answer": 1
-      },
-      {
-        "questionId": "AFA-113",
-        "prompt": "IF AT ANY TIME THE VOLTMETER NEEDLE INDICATES IN THE ......... ATC. THE PILOT SHOULD LAND AT THE NEAREST SUITABLE AIRPORT AND SERVICE THE AIRCRAFT ACCORDINGLY BEFORE CONTINUING THE FLIGHT.",
-        "options": [
-          "MAGENTA",
-          "YELLOW",
-          "WHITE",
-          "RED"
-        ],
-        "answer": 3
-      },
-      {
-        "questionId": "AFA-114",
-        "prompt": "During Flaps Failure, if only CRUISE Flaps are available\nraise approach speed by ..... kts\nflat approach angle\nthrottle as required",
-        "options": [
-          "5 kts",
-          "10 kts",
-          "15 kts",
-          "20 kts"
-        ],
-        "answer": 1
-      },
-      {
-        "questionId": "AFA-115",
-        "prompt": "Full travel of the elevator trim system will take approximately .... seconds.",
-        "options": [
-          "10",
-          "5",
-          "8",
-          "15"
-        ],
-        "answer": 0
-      },
-      {
-        "questionId": "AFA-116",
-        "prompt": "During precautionary landing, if no suitable level landing area can be found .......... landing should be performed, if possible.",
-        "options": [
-          "A down-hill",
-          "A cross-slope",
-          "Any slope",
-          "An up-hill"
-        ],
-        "answer": 3
-      },
-      {
-        "questionId": "AFA-117",
-        "prompt": "What is the EMERGENCY VHF Frequency.",
-        "options": [
-          "120.50 Mhz",
-          "123.45 Mhz",
-          "121.50 Mhz",
-          "122.77 Mhz"
-        ],
-        "answer": 2
       }
     ]
   },
@@ -1273,17 +1019,6 @@ window.QUESTION_BANK = [
           "The START warning light remains illuminated after you release the key during engine start",
           "Stuck engine",
           "Both A and B"
-        ],
-        "answer": 3
-      },
-      {
-        "questionId": "AFA-119",
-        "prompt": "Where do you plan to land in case of defective main landing gear tire?",
-        "options": [
-          "Left side of the runway",
-          "Land on the side of runway corresponding to defective tire",
-          "Centerline of the runway",
-          "Land on the side of runway corresponding to good tire"
         ],
         "answer": 3
       },
@@ -1308,17 +1043,6 @@ window.QUESTION_BANK = [
         "answer": 1
       },
       {
-        "questionId": "AFA-122",
-        "prompt": "ENGINE FAILURE AFTER TAKE-OFF with flaps in T/O position speed is .....",
-        "options": [
-          "60",
-          "55",
-          "73",
-          "90"
-        ],
-        "answer": 0
-      },
-      {
         "questionId": "AFA-123",
         "prompt": "If you have shut down the engine following an ENGINER FIRE DURING FLIGHT, you can reattempt engine restart just one time.",
         "options": [
@@ -1337,17 +1061,6 @@ window.QUESTION_BANK = [
           "All of above"
         ],
         "answer": 3
-      },
-      {
-        "questionId": "AFA-125",
-        "prompt": "During an engine failure in flight, the propeller will continue to windmill as long as the airspeed is at least ...... KIAS.",
-        "options": [
-          "40",
-          "60",
-          "50",
-          "73"
-        ],
-        "answer": 1
       },
       {
         "questionId": "AFA-126",
@@ -1399,6 +1112,309 @@ window.QUESTION_BANK = [
         "answer": 0
       },
       {
+        "questionId": "AFA-133",
+        "prompt": "For aircraft with altitude compensating fuel system the minimum recommended flight idle is ....... RPM, during idle power flight conditions and maneuvers.",
+        "options": [
+          "2000",
+          "1200",
+          "1500",
+          "1400"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-137",
+        "prompt": "IF ADEQUATE ENGINE PERFORMANCE CANNOT BE RESTORED JUST AFTER TAKE OFF, IMMEDIATELY PREPARE FOR AN EMERGENCY LANDING. IF POSSIBLE, LAND STRAIGHT AHEAD, AVOIDING OBSTACLES.",
+        "options": [
+          "True",
+          "False"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-138",
+        "prompt": "In case of Engine Fire in Flight, 73 KIAS is for best glide with flaps in ........... position. If a suitable landing area is available and can be safely reached, airspeed can be increased in an attempt to extinguish the fire. Do not exceed airspeeds given for structural limitations.",
+        "options": [
+          "T/O",
+          "CRUISE",
+          "LDG",
+          "T/O or LDG"
+        ],
+        "answer": 1
+      }
+    ]
+  },
+  {
+    "id": "similar",
+    "title": "Similar Questions",
+    "short": "Similar",
+    "questions": [
+      {
+        "questionId": "AFA-023",
+        "prompt": "Turn the fuel pump on for all low throttle operations, including taxiing and all flight operations when engine speed could fall below ........... RPM (eg. stalls, descents, spins, landings, etc.).",
+        "options": [
+          "1000 RPM",
+          "1200 RPM",
+          "1300 RPM",
+          "1400 RPM"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-033",
+        "prompt": "After engine start oil pressure may advance above 100 PSI until Oil Temperature reaches normal operating temperatures.",
+        "options": [
+          "True",
+          "False"
+        ],
+        "answer": 1
+      },
+      {
+        "questionId": "AFA-035",
+        "prompt": "BEFORE STARTING THE ENGINE, THE CANOPY MAY BE LEFT OPEN IF THE OUTSIDE TEMPERATURE IS MORE THAN 38°C",
+        "options": [
+          "True",
+          "False"
+        ],
+        "answer": 1
+      },
+      {
+        "questionId": "AFA-036",
+        "prompt": "FOR STRONG HEADWIND, CROSSWIND, DANGER OF WINDSHEAR OR TURBULENCE, A ........... APPROACH SPEED SHOULD BE SELECTED.",
+        "options": [
+          "HIGHER",
+          "LOWER",
+          "SAME",
+          "SAME or LOWER"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-040",
+        "prompt": "DO NOT OPERATE ENGINE ABOVE ........ RPM UNTIL AN OIL TEMPERATURE INDICATION IS REGISTERED.",
+        "options": [
+          "2000",
+          "1200",
+          "1500",
+          "1000"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-072",
+        "prompt": "IF FIRE EXTINGUISHER IS USED, THE CABIN MUST BE VENTILATED.",
+        "options": [
+          "TRUE",
+          "FALSE"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-073",
+        "prompt": "Where do you plan to land in case of defective main landing gear tire?",
+        "options": [
+          "Land on the side of runway corresponding to good tire",
+          "Left side of the runway",
+          "Land on the side of runway corresponding to defective tire",
+          "Centerline of the runway"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-074",
+        "prompt": "While Accomplishing the ENGINE MALFUNCTION IN FLIGHT (ENGINE STOPPAGE) AIRSPEED SHOULD BE 73 KIAS (with flaps cruise)",
+        "options": [
+          "TRUE",
+          "FALSE"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-076",
+        "prompt": "There is .... minutes of battery power at a discharge load of .... amperes when the battery is fully charged and properly maintained.",
+        "options": [
+          "30 / 30",
+          "30 / 20",
+          "20 / 30",
+          "20 / 20"
+        ],
+        "answer": 1
+      },
+      {
+        "questionId": "AFA-077",
+        "prompt": "IF AT ANY TIME THE VOLTMETER NEEDLE INDICATES IN THE ........... ARC, THE PILOT SHOULD LAND AT THE NEAREST SUITABLE AIRPORT AND SERVICE THE AIRCRAFT ACCORDINGLY BEFORE CONTINUING THE FLIGHT.",
+        "options": [
+          "RED",
+          "MAGENTA",
+          "YELLOW",
+          "WHITE"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-078",
+        "prompt": "Which one of the following indication(s) is/are an electrical failure?",
+        "options": [
+          "Voltmeter indicates significantly lower than normal",
+          "Ammeter indicates negative",
+          "GEN Warning light is illuminated",
+          "All of above"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-092",
+        "prompt": "Full travel of the elevator trim system will take approximately .... seconds",
+        "options": [
+          "5",
+          "8",
+          "10",
+          "15"
+        ],
+        "answer": 2
+      },
+      {
+        "questionId": "AFA-094",
+        "prompt": "What is the EMERGENCY VHF Frequency.",
+        "options": [
+          "120.50 Mhz",
+          "123.45 Mhz",
+          "121.50 Mhz",
+          "122.77 Mhz"
+        ],
+        "answer": 2
+      },
+      {
+        "questionId": "AFA-096",
+        "prompt": "Recommended minimum flight idle speed ....... RPM, during idle power flight conditions and maneuvers.",
+        "options": [
+          "1400 RPM",
+          "1200 RPM",
+          "1300 RPM",
+          "1500 RPM"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-099",
+        "prompt": "Choose the positive and negative load factors for each column in the table.",
+        "options": [
+          "Vₐ: +4.4 / −2.2\nVₙₑ: +3.8 / −1.5\nT/O or LDG: +2.0 / 0",
+          "Vₐ: +3.8 / −1.5\nVₙₑ: +4.4 / −2.2\nT/O or LDG: +2.0 / −1.0",
+          "Vₐ: +4.4 / −2.2\nVₙₑ: +4.4 / −2.2\nT/O or LDG: +2.0 / 0",
+          "Vₐ: +4.4 / −2.2\nVₙₑ: +4.4 / −2.2\nT/O or LDG: +2.0 / −1.0"
+        ],
+        "answer": 2
+      },
+      {
+        "questionId": "AFA-102",
+        "prompt": "DO NOT ENGAGE STARTER IF PROPELLER IS WINDMILLING. ENGINE DAMAGE MAY RESULT",
+        "options": [
+          "True",
+          "False"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-109",
+        "prompt": "There is ........ minutes of battery power at a discharge load of .... amperes when the battery is fully charged and properly maintained.",
+        "options": [
+          "30 / 30",
+          "20 / 30",
+          "20 / 20",
+          "30 / 20"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-110",
+        "prompt": "What is the glide ratio of DA-20 C1 with flaps cruise at best gliding speed?",
+        "options": [
+          "11:2",
+          "12:1",
+          "10:1",
+          "11:1"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-114",
+        "prompt": "During Flaps Failure, if only CRUISE Flaps are available\nraise approach speed by ..... kts\nflat approach angle\nthrottle as required",
+        "options": [
+          "5 kts",
+          "10 kts",
+          "15 kts",
+          "20 kts"
+        ],
+        "answer": 1
+      },
+      {
+        "questionId": "AFA-115",
+        "prompt": "Full travel of the elevator trim system will take approximately .... seconds.",
+        "options": [
+          "10",
+          "5",
+          "8",
+          "15"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-116",
+        "prompt": "During precautionary landing, if no suitable level landing area can be found .......... landing should be performed, if possible.",
+        "options": [
+          "A down-hill",
+          "A cross-slope",
+          "Any slope",
+          "An up-hill"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-117",
+        "prompt": "What is the EMERGENCY VHF Frequency.",
+        "options": [
+          "120.50 Mhz",
+          "123.45 Mhz",
+          "121.50 Mhz",
+          "122.77 Mhz"
+        ],
+        "answer": 2
+      },
+      {
+        "questionId": "AFA-119",
+        "prompt": "Where do you plan to land in case of defective main landing gear tire?",
+        "options": [
+          "Left side of the runway",
+          "Land on the side of runway corresponding to defective tire",
+          "Centerline of the runway",
+          "Land on the side of runway corresponding to good tire"
+        ],
+        "answer": 3
+      },
+      {
+        "questionId": "AFA-122",
+        "prompt": "ENGINE FAILURE AFTER TAKE-OFF with flaps in T/O position speed is .....",
+        "options": [
+          "60",
+          "55",
+          "73",
+          "90"
+        ],
+        "answer": 0
+      },
+      {
+        "questionId": "AFA-125",
+        "prompt": "During an engine failure in flight, the propeller will continue to windmill as long as the airspeed is at least ...... KIAS.",
+        "options": [
+          "40",
+          "60",
+          "50",
+          "73"
+        ],
+        "answer": 1
+      },
+      {
         "questionId": "AFA-131",
         "prompt": "INTENTIONAL SPINNING IS ONLY PERMITTED WITH THE FLAPS IN ............ POSITION",
         "options": [
@@ -1419,17 +1435,6 @@ window.QUESTION_BANK = [
           "1300 RPM"
         ],
         "answer": 2
-      },
-      {
-        "questionId": "AFA-133",
-        "prompt": "For aircraft with altitude compensating fuel system the minimum recommended flight idle is ....... RPM, during idle power flight conditions and maneuvers.",
-        "options": [
-          "2000",
-          "1200",
-          "1500",
-          "1400"
-        ],
-        "answer": 3
       },
       {
         "questionId": "AFA-134",
@@ -1463,26 +1468,6 @@ window.QUESTION_BANK = [
           "THROTTLE - IDLE\nBRAKES - AS REQUIRED\nFLAPS - CRUISE"
         ],
         "answer": 3
-      },
-      {
-        "questionId": "AFA-137",
-        "prompt": "IF ADEQUATE ENGINE PERFORMANCE CANNOT BE RESTORED JUST AFTER TAKE OFF, IMMEDIATELY PREPARE FOR AN EMERGENCY LANDING. IF POSSIBLE, LAND STRAIGHT AHEAD, AVOIDING OBSTACLES.",
-        "options": [
-          "True",
-          "False"
-        ],
-        "answer": 0
-      },
-      {
-        "questionId": "AFA-138",
-        "prompt": "In case of Engine Fire in Flight, 73 KIAS is for best glide with flaps in ........... position. If a suitable landing area is available and can be safely reached, airspeed can be increased in an attempt to extinguish the fire. Do not exceed airspeeds given for structural limitations.",
-        "options": [
-          "T/O",
-          "CRUISE",
-          "LDG",
-          "T/O or LDG"
-        ],
-        "answer": 1
       },
       {
         "questionId": "AFA-139",

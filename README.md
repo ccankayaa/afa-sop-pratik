@@ -1,6 +1,6 @@
 ﻿# AFA SOP Pratik
 
-Diamond DA20-C1 için bağımsız, kişisel SOP çalışma uygulaması. **6 test, 144 soru**, Türkçe/İngilizce arayüz ve açık/koyu tema. Sorular ile şıklar her iki dilde de İngilizce kalır.
+Diamond DA20-C1 için bağımsız, kişisel SOP çalışma uygulaması. Altı ana testte **106 soru**, Benzer Sorular testinde **36 tekrar** bulunur. Arayüz Türkçe ve İngilizce, sorular ve şıklar İngilizcedir.
 
 ## Kullanım
 
@@ -10,11 +10,11 @@ Doğru seçimden sonra sonraki soru otomatik açılır. Yanlış seçim kırmız
 
 Her sorunun sol üstünde benzersiz bir ID görünür. Üst menüdeki **Soru ara** ile ID’yi (ör. `AFA-032`) veya soru ve şıklardaki kelimeleri arayabilirsin. Sonucu şıklarıyla açabilir ve doğrudan ilgili soruya gidebilirsin.
 
-Sol menüde **Testleri birleştir** ile en az iki test seçilebilir. **Tüm soruları çöz** bütün soru bankasını açar.
+Sol menüde **Testleri birleştir** ile en az iki ana test seçilebilir. **Tüm soruları çöz** ana bankayı tekrarlar olmadan açar. Aynı metni ve doğru cevabı paylaşan kayıtların ilki ana testinde kalır, diğerleri **Similar Questions** altında çözülür. AFA-090 ve AFA-113 bankadan çıkarılmıştır.
 
 **Retest Incorrect**, son cevabı yanlış olan soruları gösterir. Doğru cevaplanan soru listeden çıkar. **Worst Questions**, en az üç kez cevaplanmış ve hata oranı %30 veya üzeri olan soruları içerir. Bu testlere tekrar girildiğinde yeni uygun sorular eklenir ve devam eden denemenin sırası korunur. Ana sayfada toplam yanlış sayısına göre ilk 10 soru ve her birinin hata oranı gösterilir. Önceki sürümlerden yalnızca eldeki yanlış kayıtları aktarılabilir.
 
-**Görülmemiş sorular** testini açtığında, o an daha önce soru ekranında açmadığın sorulardan yeni bir liste oluşturulur. Çözüm yüzdesi, en az bir kez cevaplanan benzersiz soruların tüm bankaya oranıdır. Test kartları deneme ve tekrar sayısını, soru kartları cevaplama sayısını gösterir. Ortalama puan, gönderilen puanlı testlerin 100 üzerinden puanlarının ortalamasıdır. Eski sürümde soru bazında kayıt tutulmadığı için önceki sayılar eldeki denemelerden çıkarılır.
+**Görülmemiş sorular** testini açtığında, ana bankada daha önce soru ekranında açmadığın sorulardan yeni bir liste oluşturulur. Çözüm yüzdesi, en az bir kez cevaplanan benzersiz soruların ana bankaya oranıdır. Test kartları deneme ve tekrar sayısını, soru kartları cevaplama sayısını gösterir. Ortalama puan, gönderilen puanlı testlerin 100 üzerinden puanlarının ortalamasıdır. Eski sürümde soru bazında kayıt tutulmadığı için önceki sayılar eldeki denemelerden çıkarılır.
 
 Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri kabul et** seçenekleri dil ve tema seçimini tarayıcıda hatırlar. **Kabul et** ile ilerleme, sonuçlar ve testin başlangıç zamanı da yerel depolamada tutulur. Süre tarayıcı kapalıyken işlemeye devam eder. **Reddet** yerel kayıtları ve tercih çerezini siler. Çerez tercihleri sol menünün altından değiştirilebilir.
 
@@ -48,6 +48,6 @@ AFA logosu, kullanıcının talebiyle [AFA'nın web sitesinden](https://afa.aero
 
 ## Doğrulama
 
-Tarayıcıda tam ve eksik test bitirme, doğru/yanlış cevaplar, cevap gösterme, ortalama hesapları, yenilemede veri koruma, TR/EN, temalar, soru haritası ve açılır/kapanır menü kontrol edildi. 144 sorunun tamamında 320–1920 px aralığındaki 11 telefon/tablet/masaüstü boyutunda yatay taşma kontrolü yapıldı; iPad dikey ve yatay düzenleri görsel olarak incelendi.
+Tarayıcıda tam ve eksik test bitirme, doğru/yanlış cevaplar, cevap gösterme, ortalama hesapları, yenilemede veri koruma, TR/EN, temalar, soru haritası ve açılır/kapanır menü kontrol edildi.
 
 Geliştirici: [ccankaya](https://github.com/ccankayaa)
