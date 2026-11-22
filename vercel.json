@@ -2,6 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": null,
-  "buildCommand": null,
-  "outputDirectory": "."
+  "buildCommand": "node scripts/build.mjs",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/:lang(en|tr)", "destination": "/index.html" },
+    {
+      "source": "/test/:id(normal|normal-b|emergency|emergency-b|emergency-2|extra|similar|all|unseen|wrong|worst|mix-[0-9]{1,2})",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:lang(en|tr)/test/:id(normal|normal-b|emergency|emergency-b|emergency-2|extra|similar|all|unseen|wrong|worst|mix-[0-9]{1,2})",
+      "destination": "/index.html"
+    }
+  ]
 }

@@ -5,7 +5,7 @@ const tests = bankTests.filter((test) => test.id !== "similar");
 const storageKey = "afa-sop-pratik:v1";
 const preferenceKey = "afa-sop-pratik:preferences";
 const consentCookie = "afa_sop_storage";
-const analyticsCookie = "afa_sop_analytics";
+const productionOrigin = "https://afa-sop-pratik.vercel.app";
 const scoringVersion = 2;
 const bankVersion = 2;
 const newlyScoredIds = new Set(["AFA-022", "AFA-037", "AFA-080", "AFA-112"]);
@@ -47,7 +47,7 @@ const esc = (value) =>
       ],
   );
 const icon = (name, extra = "") =>
-  `<svg class="icon ${extra}" aria-hidden="true"><use href="assets/icons.svg#${name}"></use></svg>`;
+  `<svg class="icon ${extra}" aria-hidden="true"><use href="/assets/icons.svg#${name}"></use></svg>`;
 const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const mobile = matchMedia("(max-width: 959px)");
 const strings = {
@@ -60,7 +60,6 @@ const strings = {
     testAttempts: "{n} deneme · {repeats} tekrar",
     questionAttempts: "{n} kez cevaplandı",
     noUnseen: "Tüm soruları gördün.",
-    analyticsConsent: "Anonim ziyaret analizine izin ver (Vercel)",
     appName: "SOP Pratik",
     allQuestions: "Tüm soruları çöz",
     combine: "Testleri birleştir",
@@ -87,13 +86,13 @@ const strings = {
     closeSearch: "Aramayı kapat",
     storageTitle: "Çerez ve tarayıcı depolama tercihleri",
     storageIntro:
-      "Kabul edersen ilerleme ve istatistikler bu tarayıcıda saklanır. Yalnızca gereklileri seçersen çerez, dil ve tema tercihlerin hatırlanır.",
+      "Kabul edersen ilerlemen bu tarayıcıda saklanır. Yalnızca gereklileri seçersen dil ve tema tercihlerin hatırlanır. Anonim ziyaret ölçümü çerez kullanmaz.",
     acceptStorage: "Kabul et",
     necessaryStorage: "Yalnızca gereklileri kabul et",
     rejectStorage: "Reddet",
     storageSettings: "Çerez tercihleri",
     privacy:
-      "Cevaplar ve çalışma kayıtları tarayıcıda kalır. İzin verirsen Vercel anonim ziyaret istatistikleri toplar.",
+      "Cevaplar ve çalışma kayıtları tarayıcıda kalır. Vercel, çerez kullanmadan anonim ziyaret istatistikleri toplar.",
     sessionOnly: "İlerleme yalnızca açık sayfada tutulur",
     home: "Ana sayfa",
     dashboard: "Çalışma paneli",
@@ -187,7 +186,6 @@ const strings = {
     testAttempts: "{n} attempts · {repeats} repeats",
     questionAttempts: "Answered {n} times",
     noUnseen: "You’ve seen every question.",
-    analyticsConsent: "Allow anonymous visitor analytics (Vercel)",
     appName: "SOP Practice",
     allQuestions: "Practice all questions",
     combine: "Combine tests",
@@ -214,13 +212,13 @@ const strings = {
     closeSearch: "Close search",
     storageTitle: "Cookie and browser storage preferences",
     storageIntro:
-      "Accept to save progress and statistics in this browser. Essentials only remembers your cookie, language and theme preferences.",
+      "Accept to save study progress in this browser. Essentials only remembers your language and theme. Anonymous visit analytics uses no cookies.",
     acceptStorage: "Accept",
     necessaryStorage: "Accept essentials only",
     rejectStorage: "Reject",
     storageSettings: "Cookie preferences",
     privacy:
-      "Answers and study records stay in your browser. If you opt in, Vercel collects anonymous visitor analytics.",
+      "Answers and study records stay in your browser. Vercel collects anonymous visit analytics without cookies.",
     sessionOnly: "Progress is kept only while this page is open",
     home: "Home",
     dashboard: "Study dashboard",
@@ -317,7 +315,6 @@ const testTitles = {
 };
 let storageAvailable = true;
 let consent = readConsent();
-let analyticsAllowed = readAnalyticsConsent();
 let consentOpen = !consent;
 let state = restore();
 let drawerOpen = false;
@@ -437,34 +434,29 @@ function readConsent() {
   return ["accepted", "essential"].includes(value) ? value : null;
 }
 
-function readAnalyticsConsent() {
-  return (
-    readConsent() === "accepted" &&
-    document.cookie.split("; ").includes(`${analyticsCookie}=yes`)
-  );
-}
-
 function startAnalytics() {
+  if (location.origin !== productionOrigin) return;
+  // Remove the retired preference; the analytics script itself uses no cookies.
   if (
-    !analyticsAllowed ||
-    !readAnalyticsConsent() ||
-    location.origin !== "https://afa-sop-pratik.vercel.app" ||
-    $("vercel-analytics")
+    document.cookie
+      .split("; ")
+      .some((cookie) => cookie.startsWith("afa_sop_analytics="))
   )
-    return;
+    document.cookie =
+      "afa_sop_analytics=; Max-Age=0; Path=/; SameSite=Lax; Secure";
   window.va =
     window.va ||
     function () {
       (window.vaq = window.vaq || []).push(arguments);
     };
   window.va("beforeSend", (event) => {
-    if (
-      !analyticsAllowed ||
-      !readAnalyticsConsent() ||
-      event.type !== "pageview"
+    if (event.type !== "pageview") return null;
+    const path = location.pathname.match(
+      /^\/(?:(?:en|tr)\/)?test\/[a-z0-9-]+\/?$/i,
     )
-      return null;
-    return { ...event, url: `${location.origin}/` };
+      ? location.pathname
+      : "/";
+    return { ...event, url: `${location.origin}${path}` };
   });
   const script = document.createElement("script");
   script.id = "vercel-analytics";
@@ -925,8 +917,7 @@ function renderStorageBanner() {
   banner.hidden = !consentOpen;
   document.body.classList.toggle("storage-banner-open", consentOpen);
   if (!consentOpen) return;
-  banner.innerHTML = `<div><h2 id="storage-title">${t("storageTitle")}</h2><p>${t("storageIntro")}</p>
-    <label class="analytics-consent"><input type="checkbox" id="analytics-opt-in" ${analyticsAllowed ? "checked" : ""}>${t("analyticsConsent")}</label></div>
+  banner.innerHTML = `<div><h2 id="storage-title">${t("storageTitle")}</h2><p>${t("storageIntro")}</p></div>
     <div class="storage-actions">
       <button class="button button-primary" data-consent="accepted">${t("acceptStorage")}</button>
       <button class="button button-outline" data-consent="essential">${t("necessaryStorage")}</button>
@@ -940,8 +931,6 @@ function renderStorageBanner() {
 
 function chooseStorage(choice) {
   checkpointQuestion();
-  analyticsAllowed =
-    choice === "accepted" && Boolean($("analytics-opt-in")?.checked);
   const previous = consent;
   consent = choice;
   consentOpen = false;
@@ -951,7 +940,6 @@ function chooseStorage(choice) {
     document.cookie = `${consentCookie}=; Max-Age=0; ${attributes}`;
   else
     document.cookie = `${consentCookie}=${choice}; Max-Age=31536000; ${attributes}`;
-  document.cookie = `${analyticsCookie}=${analyticsAllowed ? "yes" : ""}; Max-Age=${analyticsAllowed ? 31536000 : 0}; ${attributes}`;
 
   if (choice === "accepted" && previous !== "accepted") {
     const saved = restore();
@@ -992,7 +980,6 @@ function chooseStorage(choice) {
   savePreferences();
   readRoute();
   renderChrome();
-  startAnalytics();
   $("main").focus({ preventScroll: true });
 }
 
@@ -1362,7 +1349,13 @@ function markSeen(question) {
 function readRoute(questionIndex) {
   clearTimeout(advanceTimer);
   checkpointQuestion();
-  const id = location.hash.startsWith("#test/") ? location.hash.slice(6) : "";
+  const id = location.hash.startsWith("#test/")
+    ? location.hash.slice(6)
+    : location.hash === "#home"
+      ? ""
+      : (/^\/(?:(?:en|tr)\/)?test\/([a-z0-9-]+)\/?$/.exec(
+          location.pathname,
+        )?.[1] ?? "");
   const test = getTest(id);
   view = test ? "test" : "home";
   if (test) {
@@ -1379,6 +1372,17 @@ function readRoute(questionIndex) {
   render();
 }
 
+function setPracticeLocation(id) {
+  const path = id ? `/test/${id}` : "/";
+  const target =
+    location.origin === productionOrigin ? path : id ? `#test/${id}` : "#home";
+  const current =
+    location.origin === productionOrigin
+      ? location.pathname + location.search + location.hash
+      : location.hash;
+  if (target !== current) history.pushState(null, "", target);
+}
+
 function navigate(id) {
   if (id === "wrong" || id === "worst") {
     const keys = reviewPool(id).map((question) => question.key);
@@ -1388,12 +1392,8 @@ function navigate(id) {
       else if (run) run.keys = [...new Set([...run.keys, ...keys])];
     }
   }
-  const hash = id ? `#test/${id}` : "#home";
-  if (location.hash === hash) readRoute();
-  else {
-    location.hash = hash;
-    return;
-  }
+  setPracticeLocation(id);
+  readRoute();
   $("main").focus({ preventScroll: true });
   window.scrollTo({ top: 0 });
 }
@@ -1562,10 +1562,8 @@ function openSearchQuestion(key) {
   if (!question) return;
   const index = question.position;
   if ($("search-dialog").open) $("search-dialog").close();
-  const hash = `#test/${question.source}`;
-  if (location.hash !== hash) {
-    // Use the normal test route without rendering the old question first.
-    history.pushState(null, "", hash);
+  if (view !== "test" || state.active !== question.source) {
+    setPracticeLocation(question.source);
     readRoute(index);
     window.scrollTo({ top: 0 });
     return focusQuestion(true);
@@ -1740,11 +1738,12 @@ mobile.addEventListener("change", () => setDrawer(false));
 $("confirmation").addEventListener("close", () => {
   if ($("confirmation").returnValue === "finish") finishTest();
 });
-window.addEventListener("hashchange", () => {
+function followBrowserNavigation() {
   readRoute();
   $("main").focus({ preventScroll: true });
   window.scrollTo({ top: 0 });
-});
+}
+window.addEventListener("popstate", followBrowserNavigation);
 document.addEventListener("keydown", (event) => {
   if (drawerOpen) {
     if (event.key === "Escape") {
@@ -1785,6 +1784,8 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+const initialLanguage = /^\/(en|tr)(?:\/|$)/.exec(location.pathname)?.[1];
+if (initialLanguage) state.language = initialLanguage;
 readRoute();
 renderChrome();
 startAnalytics();

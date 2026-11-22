@@ -20,15 +20,15 @@ Varsayılan arayüz dili İngilizcedir. **Kabul et** ve **Yalnızca gereklileri 
 
 ## Çalıştırma ve Vercel
 
-Derleme adımı veya npm bağımlılığı yoktur. Proje klasöründe:
+Yerel kullanım için npm bağımlılığı gerekmez. Proje klasöründe:
 
 ```sh
 python -m http.server 4173
 ```
 
-Ardından `http://localhost:4173` adresini açın. Vercel'de depoyu içe aktarın; framework **Other**, çıktı klasörü **.**, install/build komutları boş olmalıdır. `vercel.json` bu ayarları içerir. Git entegrasyonu bağlıysa `main` dalına gönderilen commit otomatik yayımlanır.
+Ardından `http://localhost:4173` adresini açın. Vercel'de proje **Other** olarak dağıtılır. `node scripts/build.mjs` uygulamayı ve soru bankasını tek JavaScript dosyasında birleştirip `dist/` klasörüne yazar. `vercel.json`, doğrudan açılan `/tr`, `/en` ve `/test/normal` gibi uygulama yollarını ana sayfa dosyasına yönlendirir. Eski `/#test/normal` bağlantıları da çalışır. Bilinmeyen adresler 404 olarak döner. Git entegrasyonu bağlıysa `main` dalına gönderilen commit otomatik yayımlanır.
 
-[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) etkinleştirildikten sonra canlı sitede yalnızca anonim ziyaret analizini ayrıca işaretleyip kabul edenlerden sayfa ziyareti ölçülür. Cevaplar ve arama metni gönderilmez. Ülke ve tarayıcı kırılımları **Analytics** bölümünde, **Visitors online** göstergesi Vercel genel bakışındaki proje kartında bulunur.
+[Vercel Web Analytics](https://vercel.com/docs/analytics/quickstart) canlı sitedeki ziyaretleri tarayıcı depolama tercihinden bağımsız ve çerez kullanmadan ölçer. Cevaplar, arama metni ve URL sorgu parametreleri gönderilmez. Ülke, tarayıcı ve **online** ziyaretçi göstergesi Vercel **Analytics** ekranındadır. HTTP hata tanısı için Vercel **Logs** bölümünü kullanın. Web Analytics sayfa ziyaretlerini ölçer, tüm statik dosya isteklerinin kaydı değildir.
 
 ## Puanlama
 

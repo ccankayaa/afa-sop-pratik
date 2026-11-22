@@ -88,13 +88,6 @@
   font-size: 12px;
   margin: 0 0 8px;
 }
-.analytics-consent {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 7px;
-  font-size: 12px;
-}
 *,
 *::before,
 *::after {
